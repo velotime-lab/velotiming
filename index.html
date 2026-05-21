@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#007aff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a84ff" media="(prefers-color-scheme: dark)" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Судейский Тайминг Профи + Отставание</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%23007aff' width='192' height='192' rx='28'/%3E%3Ctext x='96' y='125' font-size='90' fill='white' text-anchor='middle' font-family='Arial'%3E⏱%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --text: #1b1b1f;
+      --muted: #6b7280;
+      --line: #d9dee7;
+      --blue: #007aff;
+      --blue2: #0a84ff;
+      --green: #34c759;
+      --red: #ff3b30;
+      --orange: #ff9500;
+      --shadow: 0 6px 24px rgba(0,0,0,0.08);
+      --radius: 18px;
+      --dead-zone: 70px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f0f10;
+        --card: #17181c;
+        --text: #eef0f4;
+        --muted: #a0a7b5;
+        --line: #2c2f36;
+        --shadow: 0 8px 28px rgba(0,0,0,0.35);
+      }
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      overscroll-behavior-y: none;
+      overscroll-behavior-x: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    h2, h3, p {
+      margin-top: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(127,127,127,0.08);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 16px;
+      min-height: 52px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform .08s ease, opacity .15s ease, background .15s ease;
+      touch-action: manipulation;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-orange { background: var(--orange); color: #fff; }
+    .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+
+    .btn-wide { width: 100%; font-size: 18px; padding: 18px 16px; }
+
+    .file-input-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #8e8e93;
+      color: #fff;
+      padding: 14px 18px;
+      border-radius: 14px;
+      min-height: 52px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      min-height: 52px;
+      padding: 12px 14px;
+      font-size: 16px;
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+    }
+
+    input::placeholder { color: #98a1b2; }
+
+    .manual-grid {
+      display: grid;
+      grid-template-columns: 110px 160px 110px 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .stack { display: grid; gap: 10px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+
+    .preview-list-container {
+      max-height: 280px;
+      overflow-y: auto;
+      background: rgba(127,127,127,0.06);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .rider-preview-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      min-height: 50px;
+    }
+    .rider-preview-item:last-child { border-bottom: 0; }
+    .rider-info-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .btn-actions-wrap { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-mini {
+      min-height: 40px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 0;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .btn-mini-blue { background: var(--blue); color: #fff; }
+    .btn-mini-red { background: var(--red); color: #fff; }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .step-indicator {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .step-chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(127,127,127,0.12);
+      color: var(--muted);
+    }
+    .step-chip.active { background: var(--blue); color: #fff; }
+
+    .sticky-bar {
+      position: sticky;
+      top: calc(env(safe-area-inset-top) + 8px);
+      z-index: 20;
+      backdrop-filter: blur(12px);
+      background: color-mix(in srgb, var(--bg) 72%, transparent);
+      border: 1px solid rgba(127,127,127,0.12);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .timer-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .timer {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: clamp(34px, 7vw, 54px);
+      font-weight: 900;
+      color: var(--blue);
+      letter-spacing: 0.5px;
+      line-height: 1;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .groups-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* ===== Riders layout: buttons area + dead zone for scrolling ===== */
+    .riders-layout {
+      display: flex;
+      gap: 0;
+      position: relative;
+    }
+
+    .riders-buttons-area {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .scroll-dead-zone {
+      flex-shrink: 0;
+      width: var(--dead-zone);
+      min-height: 100%;
+      touch-action: pan-y pan-x;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 18px,
+        rgba(127,127,127,0.06) 18px,
+        rgba(127,127,127,0.06) 19px
+      );
+      border-left: 1px dashed rgba(127,127,127,0.18);
+      border-radius: 0 12px 12px 0;
+      position: relative;
+    }
+
+    .scroll-dead-zone::after {
+      content: '⋮';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px;
+      color: rgba(127,127,127,0.25);
+      letter-spacing: 2px;
+      pointer-events: none;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .scroll-dead-zone {
+        background: repeating-linear-gradient(
+          to bottom,
+          transparent,
+          transparent 18px,
+          rgba(255,255,255,0.04) 18px,
+          rgba(255,255,255,0.04) 19px
+        );
+        border-left-color: rgba(255,255,255,0.1);
+      }
+      .scroll-dead-zone::after {
+        color: rgba(255,255,255,0.15);
+      }
+    }
+
+    .group-row-section {
+      background: rgba(127,127,127,0.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .group-row-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid var(--blue);
+      color: var(--blue);
+      font-size: 18px;
+      font-weight: 900;
+      flex-wrap: wrap;
+    }
+
+    .group-row-title span { color: var(--muted); font-size: 13px; font-weight: 600; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+      gap: 8px;
+      contain: layout style paint;
+    }
+
+    .rider-btn {
+      will-change: transform, background;
+      contain: layout style paint;
+      border: 2px solid var(--blue);
+      border-radius: 16px;
+      padding: 14px 10px;
+      min-height: 92px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1;
+      background: #fff;
+      color: var(--blue);
+      transition: transform .05s ease, background .15s ease, border-color .15s ease, color .15s ease, filter .15s ease, box-shadow .1s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    .rider-btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 0 0 3px rgba(52,199,89,0.5), 0 0 20px rgba(52,199,89,0.3);
+      border-color: var(--green) !important;
+      z-index: 2;
+    }
+
+    .rider-btn.flash::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(52,199,89,0.5) 0%, rgba(52,199,89,0.15) 70%, transparent 100%);
+      border-radius: 14px;
+      animation: btn-flash 0.35s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes btn-flash {
+      0% { opacity: 1; transform: scale(0.8); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+      100% { opacity: 0; transform: scale(1.1); }
+    }
+
+    .rider-btn span { font-size: 12px; font-weight: 700; color: inherit; opacity: .9; }
+    .rider-btn.finished { background: var(--green); color: #fff; border-color: var(--green); }
+    .rider-btn.finished span { color: #fff; opacity: .92; }
+    .rider-btn.finished:active {
+      box-shadow: 0 0 0 3px rgba(255,149,0,0.5), 0 0 20px rgba(255,149,0,0.3);
+      border-color: var(--orange) !important;
+    }
+
+    .btn-sound {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+      min-height: 42px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .btn-sound.active {
+      background: rgba(0,122,255,0.12);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .log-container {
+      background: #15171b;
+      color: #7CFC98;
+      padding: 12px;
+      border-radius: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      height: 80px;
+      min-height: 80px;
+      max-height: 80px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid rgba(124,252,152,0.15);
+      margin-bottom: 12px;
+    }
+
+    .last-action-banner {
+      margin-top: 8px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      background: rgba(52,199,89,0.18);
+      color: #1b8a3e;
+      font-size: 15px;
+      font-weight: 800;
+      text-align: center;
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+      pointer-events: none;
+    }
+    .last-action-banner.visible {
+      opacity: 1;
+      max-height: 50px;
+      padding: 8px 14px;
+      margin-top: 8px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .last-action-banner {
+        background: rgba(52,199,89,0.22);
+        color: #7CFC98;
+      }
+    }
+
+    /* ===== Race Start Overlay ===== */
+    .race-start-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .race-start-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .race-start-overlay .start-content {
+      text-align: center;
+      animation: start-pop 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28) forwards;
+    }
+    .race-start-overlay .start-icon {
+      font-size: 80px;
+      display: block;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 0 30px rgba(52,199,89,0.6));
+    }
+    .race-start-overlay .start-title {
+      font-size: clamp(32px, 8vw, 56px);
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 2px 20px rgba(0,122,255,0.5);
+      letter-spacing: 1px;
+    }
+    .race-start-overlay .start-sub {
+      font-size: 18px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    @keyframes start-pop {
+      0% { transform: scale(0.3); opacity: 0; }
+      60% { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ===== Toast notification for stability events ===== */
+    .toast-container {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom, 20px));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9998;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 10px 18px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      animation: toast-in 0.3s ease forwards;
+      pointer-events: auto;
+      white-space: nowrap;
+    }
+    .toast.info { background: var(--blue); }
+    .toast.success { background: var(--green); }
+    .toast.warn { background: var(--orange); }
+    .toast.error { background: var(--red); }
+    .toast.fade-out {
+      animation: toast-out 0.3s ease forwards;
+    }
+    @keyframes toast-in {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes toast-out {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+
+    /* ===== Stability indicator ===== */
+    .stability-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(52,199,89,0.12);
+      color: var(--green);
+    }
+    .stability-indicator .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .stability-indicator.warn {
+      background: rgba(255,149,0,0.12);
+      color: var(--orange);
+    }
+    .stability-indicator.warn .dot {
+      background: var(--orange);
+      animation: none;
+    }
+
+    .results-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .results-group-block { margin-bottom: 18px; }
+    .results-group-header {
+      font-size: 18px;
+      font-weight: 900;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(127,127,127,0.14);
+      margin-bottom: 10px;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      -webkit-overflow-scrolling: touch;
+      background: var(--card);
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+      table-layout: auto;
+    }
+
+    .results-table th, .results-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 6px;
+      text-align: left;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .results-table th:first-child,
+    .results-table td:first-child { padding-left: 10px; }
+    .results-table th:last-child,
+    .results-table td:last-child { padding-right: 10px; }
+    .results-table th {
+      background: rgba(127,127,127,0.08);
+      font-weight: 800;
+    }
+    .results-table tr:nth-child(even) { background: rgba(127,127,127,0.03); }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .pill-green { background: rgba(52,199,89,0.16); color: var(--green); }
+    .pill-orange { background: rgba(255,149,0,0.16); color: var(--orange); }
+    .pill-blue { background: rgba(0,122,255,0.14); color: var(--blue); }
+    .pill-red { background: rgba(255,59,48,0.12); color: var(--red); }
+
+    .hint-box {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px dashed var(--line);
+      background: rgba(127,127,127,0.05);
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .divider {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 16px 0;
+    }
+
+    .hidden-input { display: none; }
+
+    @media (max-width: 860px) {
+      .manual-grid { grid-template-columns: 1fr 1fr; }
+      .manual-grid > *:nth-child(3),
+      .manual-grid > *:nth-child(4),
+      .manual-grid > *:nth-child(5) { grid-column: span 2; }
+      .btn-wide { font-size: 17px; }
+      .timer-banner { align-items: flex-start; }
+      .results-table { min-width: auto; }
+      .results-table th, .results-table td { font-size: 12px; padding: 6px 4px; }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .no-print { display: none !important; }
+      .card { box-shadow: none; border: 0; margin: 0; padding: 0; }
+      .screen { display: none !important; }
+      #resultsScreen { display: block !important; }
+      .results-table { min-width: 100% !important; }
+      .table-responsive { overflow: visible; }
+      .scroll-dead-zone { display: none !important; }
+      .race-start-overlay, .toast-container { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Race start overlay -->
+  <div class="race-start-overlay" id="raceStartOverlay">
+    <div class="start-content">
+      <span class="start-icon">🏁</span>
+      <div class="start-title">ГОНКА НАЧАТА!</div>
+      <div class="start-sub">Таймер запущен · Нажимайте номера участников</div>
+    </div>
+  </div>
+
+  <!-- Toast notification container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="app">
+
+    <div class="step-indicator no-print">
+      <div id="chip1" class="step-chip active">1. Участники</div>
+      <div id="chip2" class="step-chip">2. Тайминг</div>
+      <div id="chip3" class="step-chip">3. Результаты</div>
+    </div>
+
+    <div class="card screen active" id="setupScreen">
+      <div class="title-row">
+        <div>
+          <h2>Загрузка участников гонки</h2>
+          <div class="muted small">Сначала импортируйте список, проверьте его и нажмите «Продолжить».</div>
+        </div>
+        <div class="badge" id="totalRidersCount">0</div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;background:rgba(52,199,89,0.1);margin-top:8px;margin-bottom:4px;font-size:13px;color:var(--green);font-weight:700;">
+        🔒 <span>Все данные хранятся <strong>только на вашем устройстве</strong>. Никуда не передаются.</span>
+      </div>
+
+      <div class="stack" style="margin-top: 14px;">
+        <div class="hint-box">
+          <strong>CSV формат:</strong> <code>Номер;Группа;Кругов;ФИО</code>
+        </div>
+
+        <div>
+          <label for="csvFileInput" class="file-input-label">📂 Выбрать CSV-файл</label>
+          <input type="file" id="csvFileInput" accept=".csv,text/csv" class="hidden-input" onchange="handleCSVImport(this)">
+          <span id="importStatus" style="margin-left: 12px; font-weight: 700; color: var(--muted);">Файл не выбран</span>
+        </div>
+
+        <hr class="divider">
+
+        <div>
+          <h3 style="margin-bottom: 10px;">Добавить или изменить участника вручную</h3>
+          <div class="manual-grid">
+            <input type="text" id="manualId" placeholder="Номер" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" id="manualGroup" placeholder="Группа">
+            <input type="number" id="manualLaps" placeholder="Кругов" min="1" value="3" inputmode="numeric">
+            <input type="text" id="manualName" placeholder="ФИО участника">
+            <button class="btn btn-blue" onclick="addRiderManual()">+ Добавить</button>
+          </div>
+        </div>
+
+        <div id="previewContainer" style="display:none; margin-top: 8px;">
+          <div class="title-row" style="margin-bottom: 10px;">
+            <h3 style="margin: 0;">Список участников</h3>
+            <button class="btn btn-red" onclick="clearAllRidersCompletely()" style="min-height: 42px; padding: 10px 14px;">Очистить список</button>
+          </div>
+          <div id="ridersListPreview" class="preview-list-container"></div>
+          <div style="margin-top: 12px; display:grid; gap:10px;">
+            <button class="btn btn-green btn-wide" onclick="goToRaceScreen()">Продолжить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card screen" id="raceScreen">
+      <div class="sticky-bar no-print">
+        <div class="timer-banner">
+          <div>
+            <div class="muted small" style="margin-bottom: 4px;">Текущее время</div>
+            <div class="timer" id="timer">00:00.0</div>
+            <div class="stability-indicator" id="stabilityIndicator" style="margin-top: 6px;">
+              <span class="dot"></span>
+              <span id="stabilityText">Система стабильна</span>
+            </div>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-blue" onclick="toggleFullscreen()">⛶ Во весь экран</button>
+            <button class="btn btn-green" id="startBtn" onclick="startRace()">▶ Старт</button>
+            <button class="btn btn-red" id="undoBtn" onclick="undoLastAction()" style="display:none;">↩ Отменить круг</button>
+            <button class="btn btn-orange" onclick="goToResultsScreen()">Результаты</button>
+            <button class="btn btn-ghost" onclick="resetRaceData()">Сбросить</button>
+            <button class="btn-sound active" id="soundToggleBtn" onclick="toggleSound()" title="Вкл/Выкл звук нажатия">🔊</button>
+          </div>
+        </div>
+        <div class="last-action-banner" id="lastActionBanner">—</div>
+      </div>
+
+      <div class="hint-box no-print" id="raceHint" style="margin-bottom: 12px;">
+        Нажимайте на номер участника. До старта кнопки доступны, но круги не записываются.
+      </div>
+
+      <div class="log-container" id="logList">Гонка ещё не запущена.</div>
+
+      <!-- Riders layout: buttons + dead zone for scrolling -->
+      <div class="riders-layout" id="ridersLayout">
+        <div class="riders-buttons-area" id="groupsRowsContainer"></div>
+        <div class="scroll-dead-zone" id="scrollDeadZone" aria-hidden="true"></div>
+      </div>
+
+      <div style="margin-top:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <div class="muted small">Для 50 участников таблица обновляется в облегчённом режиме.</div>
+          <button class="btn btn-ghost" style="min-height:42px;padding:10px 14px;" onclick="toggleLiveTable()" id="liveTableToggleBtn">Скрыть live-таблицу</button>
+        </div>
+        <div class="title-row" style="margin-bottom:10px;">
+          <div>
+            <h3 style="margin-bottom:4px;">Текущие результаты</h3>
+            <div class="muted small">Во время гонки отображаются последние круги лидера для высокой скорости и корректного live-тайминга.</div>
+          </div>
+        </div>
+        <div id="liveResultsContainer"></div>
+      </div>
+    </div>
+
+    <div class="card screen" id="resultsScreen">
+      <div class="results-toolbar no-print">
+        <div>
+          <h2 style="margin-bottom: 4px;">Финальные результаты</h2>
+          <div class="muted small">Экспорт скачивается <strong>только на ваше устройство</strong>. Никуда не отправляется.</div>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-blue" onclick="exportToCSV()">⬇ CSV</button>
+          <button class="btn btn-ghost" onclick="exportToHTML()">⬇ HTML</button>
+          <button class="btn btn-green" onclick="window.print()">🖨 PDF / Печать</button>
+          <button class="btn btn-orange" onclick="backToRace()">← Назад</button>
+        </div>
+      </div>
+
+      <div id="resultsTablesContainer"></div>
+    </div>
+  </div>
+
+<script>
+  // ===== PWA — Register Service Worker =====
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        console.log('SW registered:', reg.scope);
+        // Force update check
+        reg.update();
+      }).catch(err => {
+        console.warn('SW registration failed:', err);
+      });
+    });
+  }
+
+  // ===== Tab conflict detection =====
+  let tabId = Date.now() + '_' + Math.random().toString(36).slice(2);
+  let isPrimaryTab = true;
+
+  try {
+    const storedTab = localStorage.getItem('activeTabId');
+    if (storedTab) {
+      const parsed = JSON.parse(storedTab);
+      // If another tab was active in the last 30 seconds, warn
+      if (parsed.id !== tabId && (Date.now() - parsed.time) < 30000) {
+        isPrimaryTab = false;
+      }
+    }
+    localStorage.setItem('activeTabId', JSON.stringify({ id: tabId, time: Date.now() }));
+
+    // Update tab heartbeat
+    setInterval(() => {
+      try {
+        localStorage.setItem('activeTabId', JSON.stringify({ id: tabId, time: Date.now() }));
+      } catch(e) {}
+    }, 5000);
+
+    // Listen for other tabs
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'activeTabId' && e.newValue) {
+        try {
+          const other = JSON.parse(e.newValue);
+          if (other.id !== tabId) {
+            isPrimaryTab = false;
+            if (isRaceStarted) {
+              showToast('⚠️ Обнаружена другая вкладка с таймингом! Возможен конфликт данных.', 'warn', 5000);
+            }
+          }
+        } catch(e2) {}
+      }
+    });
+  } catch(e) {}
+
+  // ===== Core State =====
+  let startTime = null;
+  let timerInterval = null;
+  let isRaceStarted = false;
+  let riders = {};
+  let actionHistory = [];
+  let renderQueued = false;
+  let liveTableCollapsed = false;
+  let activeScreen = 'setup';
+  let currentGroupBaseLaps = {};
+  let autoSaveInterval = null;
+  let saveErrorCount = 0;
+
+  // ===== Toast Notification System =====
+  function showToast(message, type, duration) {
+    type = type || 'info';
+    duration = duration || 3000;
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }, duration);
+  }
+
+  // ===== Stability Indicator =====
+  function setStabilityStatus(ok, text) {
+    const indicator = document.getElementById('stabilityIndicator');
+    const textEl = document.getElementById('stabilityText');
+    if (!indicator || !textEl) return;
+    if (ok) {
+      indicator.classList.remove('warn');
+    } else {
+      indicator.classList.add('warn');
+    }
+    textEl.textContent = text || (ok ? 'Система стабильна' : 'Внимание');
+  }
+
+  // ===== Sound System =====
+  let soundEnabled = true;
+  let audioCtx = null;
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) {
+        return null;
+      }
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  }
+
+  function playClickSound() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1200, now);
+      oscillator.frequency.exponentialRampToValueAtTime(600, now + 0.06);
+
+      gainNode.gain.setValueAtTime(0.3, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.start(now);
+      oscillator.stop(now + 0.1);
+    } catch (e) {}
+  }
+
+  // ===== Start Race Horn Sound — 3-tone ascending signal =====
+  function playStartHorn() {
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+
+      // Three ascending tones: 440Hz -> 660Hz -> 880Hz
+      const tones = [
+        { freq: 440, start: 0,    dur: 0.25 },
+        { freq: 660, start: 0.30, dur: 0.25 },
+        { freq: 880, start: 0.60, dur: 0.50 }
+      ];
+
+      tones.forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(t.freq, now + t.start);
+
+        // Smooth envelope to avoid clicking
+        gain.gain.setValueAtTime(0, now + t.start);
+        gain.gain.linearRampToValueAtTime(0.25, now + t.start + 0.02);
+        gain.gain.setValueAtTime(0.25, now + t.start + t.dur - 0.03);
+        gain.gain.linearRampToValueAtTime(0, now + t.start + t.dur);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + t.start);
+        osc.stop(now + t.start + t.dur + 0.01);
+      });
+
+      // Vibrate pattern: short-short-long
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 80, 100, 80, 300]);
+      }
+    } catch (e) {}
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundToggleBtn');
+    if (soundEnabled) {
+      btn.textContent = '🔊';
+      btn.classList.add('active');
+    } else {
+      btn.textContent = '🔇';
+      btn.classList.remove('active');
+    }
+    try {
+      localStorage.setItem('soundEnabled', JSON.stringify(soundEnabled));
+    } catch(e) {}
+
+    if (soundEnabled) {
+      playClickSound();
+    }
+  }
+
+  // ===== Wake Lock =====
+  let wakeLock = null;
+
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        if (wakeLock !== null && !wakeLock.released) return;
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+          wakeLock = null;
+          // If race is still running, try to re-acquire
+          if (isRaceStarted) {
+            setTimeout(() => requestWakeLock(), 1000);
+          }
+        });
+        if (isRaceStarted) {
+          setStabilityStatus(true, 'Экран активен · Система стабильна');
+        }
+      } catch (err) {
+        console.warn('Wake Lock error:', err);
+        if (isRaceStarted) {
+          setStabilityStatus(true, 'Блокировка экрана недоступна');
+        }
+      }
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock !== null) {
+      try { wakeLock.release(); } catch(e) {}
+      wakeLock = null;
+    }
+  }
+
+  // ===== Fullscreen =====
+  function toggleFullscreen() {
+    try {
+      const doc = document.documentElement;
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        doc.requestFullscreen?.() || doc.webkitRequestFullscreen?.();
+      } else {
+        document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+      }
+    } catch(e) {}
+  }
+
+  // ===== Data Persistence — Robust save/load =====
+  function saveToLocalStorage() {
+    try {
+      localStorage.setItem('riders', JSON.stringify(riders));
+      localStorage.setItem('isRaceStarted', JSON.stringify(isRaceStarted));
+      localStorage.setItem('actionHistory', JSON.stringify(actionHistory));
+      localStorage.setItem('logHTML', document.getElementById('logList').innerHTML);
+      if (isRaceStarted && startTime) {
+        localStorage.setItem('startTime', String(startTime));
+      }
+      saveErrorCount = 0;
+      return true;
+    } catch (e) {
+      saveErrorCount++;
+      if (saveErrorCount === 1) {
+        showToast('⚠️ Ошибка сохранения! Данные только в памяти. Проверьте место.', 'error', 5000);
+        setStabilityStatus(false, 'Ошибка сохранения данных');
+      }
+      return false;
+    }
+  }
+
+  // Emergency save using sessionStorage as fallback
+  function emergencySave() {
+    try {
+      const data = {
+        riders: riders,
+        isRaceStarted: isRaceStarted,
+        actionHistory: actionHistory,
+        startTime: startTime,
+        logHTML: document.getElementById('logList') ? document.getElementById('logList').innerHTML : '',
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('timingEmergencyBackup', JSON.stringify(data));
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function tryEmergencyRestore() {
+    try {
+      const raw = sessionStorage.getItem('timingEmergencyBackup');
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      // Only restore if we don't have newer data in localStorage
+      if (data.timestamp && data.riders && Object.keys(data.riders).length > 0) {
+        return data;
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  // ===== Auto-save during race =====
+  function startAutoSave() {
+    if (autoSaveInterval) return;
+    autoSaveInterval = setInterval(() => {
+      if (isRaceStarted) {
+        saveToLocalStorage();
+        emergencySave();
+      }
+    }, 3000);
+  }
+
+  function stopAutoSave() {
+    if (autoSaveInterval) {
+      clearInterval(autoSaveInterval);
+      autoSaveInterval = null;
+    }
+  }
+
+  // ===== Protection against accidental close =====
+  window.addEventListener('beforeunload', (e) => {
+    if (isRaceStarted) {
+      saveToLocalStorage();
+      emergencySave();
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // pagehide fires more reliably on mobile (iOS especially)
+  window.addEventListener('pagehide', (e) => {
+    if (isRaceStarted) {
+      saveToLocalStorage();
+      emergencySave();
+    }
+  });
+
+  // Freeze detection — save before potential freeze
+  if (document.addEventListener) {
+    document.addEventListener('freeze', (e) => {
+      saveToLocalStorage();
+      emergencySave();
+    });
+  }
+
+  // ===== Visibility change — THE critical handler =====
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      // Going to background — SAVE IMMEDIATELY
+      if (isRaceStarted) {
+        saveToLocalStorage();
+        emergencySave();
+      }
+    } else if (document.visibilityState === 'visible') {
+      // Coming back to foreground
+      if (isRaceStarted) {
+        // Re-request wake lock
+        requestWakeLock();
+
+        // Re-initialize audio context (mobile suspends it)
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+
+        // Verify timer interval is still running
+        ensureTimerRunning();
+
+        // Sync timer display
+        syncTimerText();
+
+        // Re-render grid in case DOM was lost
+        if (Object.keys(riders).length > 0) {
+          renderGrid();
+          updateTable();
+        }
+
+        setStabilityStatus(true, 'Система восстановлена');
+        showToast('✅ Гонка активна — данные сохранены', 'success', 2000);
+      }
+    }
+  });
+
+  // Ensure timer interval is alive
+  function ensureTimerRunning() {
+    if (!isRaceStarted || !startTime) return;
+
+    // If interval was lost (browser killed it while backgrounded), recreate it
+    if (!timerInterval) {
+      timerInterval = setInterval(updateTimer, 100);
+    }
+  }
+
+  // ===== Data integrity validation on restore =====
+  function validateRestoredData(data) {
+    if (!data || typeof data !== 'object') return false;
+    const r = data.riders;
+    if (!r || typeof r !== 'object') return false;
+
+    // Check each rider has required fields
+    for (const id of Object.keys(r)) {
+      const rider = r[id];
+      if (!rider || typeof rider !== 'object') return false;
+      if (typeof rider.lapsDone !== 'number') return false;
+      if (typeof rider.maxLaps !== 'number') return false;
+      if (!Array.isArray(rider.lapTimes)) return false;
+      if (rider.finishTime !== null && typeof rider.finishTime !== 'number') return false;
+    }
+    return true;
+  }
+
+  // ===== Window Load & State Restore =====
+  window.onload = function () {
+    // Restore sound preference
+    try {
+      const savedSound = localStorage.getItem('soundEnabled');
+      if (savedSound !== null) {
+        soundEnabled = JSON.parse(savedSound);
+        const btn = document.getElementById('soundToggleBtn');
+        if (soundEnabled) {
+          btn.textContent = '🔊';
+          btn.classList.add('active');
+        } else {
+          btn.textContent = '🔇';
+          btn.classList.remove('active');
+        }
+      }
+    } catch(e) {}
+
+    // Restore race state
+    let restored = false;
+    try {
+      const savedRidersRaw = localStorage.getItem('riders');
+      if (savedRidersRaw) {
+        const parsedRiders = JSON.parse(savedRidersRaw);
+        const parsedStarted = JSON.parse(localStorage.getItem('isRaceStarted') || 'false');
+        const parsedHistory = JSON.parse(localStorage.getItem('actionHistory') || '[]');
+        const parsedStart = parseFloat(localStorage.getItem('startTime') || '0') || null;
+
+        // Validate data
+        const testData = { riders: parsedRiders };
+        if (validateRestoredData(testData)) {
+          riders = parsedRiders;
+          isRaceStarted = parsedStarted;
+          actionHistory = parsedHistory;
+          startTime = parsedStart;
+          restored = true;
+        }
+      }
+    } catch(e) {
+      // localStorage corrupted, try emergency backup
+    }
+
+    // If localStorage restore failed, try emergency sessionStorage backup
+    if (!restored) {
+      const emergency = tryEmergencyRestore();
+      if (emergency && emergency.riders) {
+        const testData = { riders: emergency.riders };
+        if (validateRestoredData(testData)) {
+          riders = emergency.riders;
+          isRaceStarted = emergency.isRaceStarted || false;
+          actionHistory = emergency.actionHistory || [];
+          startTime = emergency.startTime || null;
+          restored = true;
+          showToast('🔄 Данные восстановлены из резервной копии', 'warn', 4000);
+        }
+      }
+    }
+
+    if (restored && isRaceStarted && startTime) {
+      showScreen('race');
+      timerInterval = setInterval(updateTimer, 100);
+      try {
+        document.getElementById('logList').innerHTML = localStorage.getItem('logHTML') || 'Гонка восстановлена.';
+      } catch(e) {
+        document.getElementById('logList').innerHTML = 'Гонка восстановлена.';
+      }
+      document.getElementById('startBtn').innerText = '⏸ Идёт гонка';
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('raceHint').innerText = 'Гонка запущена. Нажимайте на номера участников по мере прохождения кругов.';
+      renderGrid();
+      updateTable();
+      recalculateGroupBaseLaps();
+      if (actionHistory.length > 0) document.getElementById('undoBtn').style.display = 'inline-flex';
+      requestWakeLock();
+      startAutoSave();
+      showToast('🔄 Гонка восстановлена из предыдущей сессии', 'info', 3000);
+    } else if (restored && Object.keys(riders).length > 0) {
+      updatePreview();
+      showScreen('setup');
+    }
+    syncTimerText();
+  };
+
+  function showScreen(name) {
+    activeScreen = name;
+    document.getElementById('setupScreen').classList.toggle('active', name === 'setup');
+    document.getElementById('raceScreen').classList.toggle('active', name === 'race');
+    document.getElementById('resultsScreen').classList.toggle('active', name === 'results');
+    document.getElementById('chip1').classList.toggle('active', name === 'setup');
+    document.getElementById('chip2').classList.toggle('active', name === 'race');
+    document.getElementById('chip3').classList.toggle('active', name === 'results');
+  }
+
+  function syncTimerText() {
+    if (!document.getElementById('timer')) return;
+    document.getElementById('timer').innerText = isRaceStarted && startTime ? formatTime(Date.now() - startTime) : '00:00.0';
+  }
+
+  function addRiderManual() {
+    const id = document.getElementById('manualId').value.trim();
+    const group = document.getElementById('manualGroup').value.trim() || 'Без группы';
+    const maxLaps = parseInt(document.getElementById('manualLaps').value, 10) || 1;
+    const name = document.getElementById('manualName').value.trim() || `Участник ${id}`;
+
+    if (!id) return alert('Введите номер!');
+    if (riders[id]) return alert(`Участник №${id} уже есть!`);
+
+    riders[id] = createRider(id, group, maxLaps, name);
+    recalculateGroupBaseLaps();
+    clearInputsAfterAdd();
+    updatePreview();
+    saveToLocalStorage();
+  }
+
+  function clearInputsAfterAdd() {
+    document.getElementById('manualId').value = '';
+    document.getElementById('manualName').value = '';
+    document.getElementById('manualLaps').value = '3';
+    document.getElementById('manualGroup').value = '';
+  }
+
+  function createRider(id, group, maxLaps, name) {
+    return {
+      id: String(id),
+      group,
+      lapsDone: 0,
+      maxLaps: Math.max(1, parseInt(maxLaps, 10) || 1),
+      name,
+      finishTime: null,
+      controlFinishTime: null,
+      lapTimes: []
+    };
+  }
+
+  function handleCSVImport(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const text = String(e.target.result || '');
+      const lines = text.split(/\r?\n/);
+      let imported = 0;
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        const columns = line.split(';');
+        if (columns.length < 3) return;
+
+        const id = columns[0].trim();
+        if (!id) return;
+        const group = columns[1].trim() || 'Без группы';
+        const maxLaps = parseInt(columns[2].trim(), 10) || 1;
+        const name = columns[3] ? columns[3].trim() : `Участник ${id}`;
+
+        riders[id] = createRider(id, group, maxLaps, name);
+        imported++;
+      });
+
+      recalculateGroupBaseLaps();
+      document.getElementById('importStatus').innerText = `✅ Импортировано: ${imported}`;
+      document.getElementById('importStatus').style.color = 'var(--green)';
+      updatePreview();
+      saveToLocalStorage();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function recalculateGroupBaseLaps() {
+    currentGroupBaseLaps = {};
+    const groupsMap = buildGroupsMap();
+    Object.keys(groupsMap).forEach(groupName => {
+      const base = Math.min(...groupsMap[groupName].map(r => r.maxLaps));
+      currentGroupBaseLaps[groupName] = base;
+    });
+  }
+
+  function buildGroupsMap() {
+    const groupsMap = {};
+    Object.values(riders).forEach(r => {
+      if (!groupsMap[r.group]) groupsMap[r.group] = [];
+      groupsMap[r.group].push(r);
+    });
+    return groupsMap;
+  }
+
+  function editSingleRider(id) {
+    const r = riders[id];
+    if (!r) return;
+    document.getElementById('manualId').value = r.id;
+    document.getElementById('manualGroup').value = r.group;
+    document.getElementById('manualLaps').value = r.maxLaps;
+    document.getElementById('manualName').value = r.name;
+    delete riders[id];
+    recalculateGroupBaseLaps();
+    updatePreview();
+    saveToLocalStorage();
+  }
+
+  function removeSingleRider(id) {
+    if (!riders[id]) return;
+    delete riders[id];
+    recalculateGroupBaseLaps();
+    updatePreview();
+    saveToLocalStorage();
+  }
+
+  function updatePreview() {
+    const count = Object.keys(riders).length;
+    document.getElementById('totalRidersCount').innerText = count;
+    const previewDiv = document.getElementById('ridersListPreview');
+    previewDiv.innerHTML = '';
+
+    if (count > 0) {
+      document.getElementById('previewContainer').style.display = 'block';
+      Object.values(riders).sort((a, b) => Number(a.id) - Number(b.id)).forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'rider-preview-item';
+        item.innerHTML = `
+          <div class="rider-info-text"><strong>№${escapeHTML(r.id)}</strong> — ${escapeHTML(r.name)} <span class="muted small">(${escapeHTML(r.group)}, ${r.maxLaps} кр.)</span></div>
+          <div class="btn-actions-wrap">
+            <button class="btn-mini btn-mini-blue" onclick="editSingleRider('${escapeAttr(r.id)}')">Изменить</button>
+            <button class="btn-mini btn-mini-red" onclick="removeSingleRider('${escapeAttr(r.id)}')">Удалить</button>
+          </div>`;
+        previewDiv.appendChild(item);
+      });
+    } else {
+      document.getElementById('previewContainer').style.display = 'none';
+    }
+  }
+
+  function goToRaceScreen() {
+    if (Object.keys(riders).length === 0) return alert('Сначала добавьте участников.');
+    recalculateGroupBaseLaps();
+    showScreen('race');
+    renderGrid();
+    updateTable();
+    saveToLocalStorage();
+  }
+
+  // ===== START RACE — with sound and overlay =====
+  function startRace() {
+    if (Object.keys(riders).length === 0) return alert('Список участников пуст.');
+    if (!isRaceStarted) {
+      startTime = Date.now();
+      isRaceStarted = true;
+      document.getElementById('startBtn').innerText = '⏸ Идёт гонка';
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('raceHint').innerText = 'Гонка запущена. Нажимайте на номера участников по мере прохождения кругов.';
+      timerInterval = setInterval(updateTimer, 100);
+
+      // Initialize audio context on user gesture (required for mobile)
+      getAudioContext();
+
+      // Play start horn sound
+      playStartHorn();
+
+      // Show "Race started" overlay
+      showRaceStartOverlay();
+
+      // Log start event
+      let currentLogs = document.getElementById('logList').innerHTML.split('</div>');
+      currentLogs = currentLogs.filter(l => l.trim().length > 0).map(l => l + '</div>');
+      currentLogs.unshift(`<div style="color:#5bf87a; font-weight:800;">🏁 ГОНКА НАЧАТА — ${new Date().toLocaleTimeString('ru-RU')}</div>`);
+      if (currentLogs.length > 50) currentLogs.length = 50;
+      document.getElementById('logList').innerHTML = currentLogs.join('');
+
+      requestWakeLock();
+      startAutoSave();
+      saveToLocalStorage();
+      emergencySave();
+      updateTimer();
+    }
+  }
+
+  function showRaceStartOverlay() {
+    const overlay = document.getElementById('raceStartOverlay');
+    if (!overlay) return;
+
+    // Reset animation
+    const content = overlay.querySelector('.start-content');
+    if (content) {
+      content.style.animation = 'none';
+      void content.offsetWidth;
+      content.style.animation = '';
+    }
+
+    overlay.classList.add('visible');
+
+    // Auto-dismiss after 2.5 seconds
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+    }, 2500);
+  }
+
+  function updateTimer() {
+    if (!isRaceStarted || !startTime) return;
+    document.getElementById('timer').innerText = formatTime(Date.now() - startTime);
+  }
+
+  function formatTime(ms) {
+    if (typeof ms !== 'number' || Number.isNaN(ms) || ms < 0) return '—';
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const d = Math.floor((ms % 1000) / 100);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${d}`;
+  }
+
+  function getProgressColor(lapsDone, maxLaps) {
+    const p = maxLaps <= 0 ? 0 : Math.min(1, lapsDone / maxLaps);
+    const shade = Math.round(255 - 58 * p);
+    return `rgb(${shade}, ${shade}, ${shade})`;
+  }
+
+  function flashButton(btn) {
+    btn.classList.remove('flash');
+    void btn.offsetWidth;
+    btn.classList.add('flash');
+    setTimeout(() => {
+      btn.classList.remove('flash');
+    }, 400);
+  }
+
+  // ===== Last action notification =====
+  let lastActionTimeout = null;
+
+  function showLastActionBanner(riderId, lapsDone, maxLaps, riderName) {
+    const banner = document.getElementById('lastActionBanner');
+    if (!banner) return;
+
+    const lapInfo = lapsDone >= maxLaps ? `🏁 ФИНИШ!` : `Круг ${lapsDone}/${maxLaps}`;
+    banner.textContent = `✓ №${riderId} ${riderName} — ${lapInfo}`;
+    banner.classList.add('visible');
+
+    if (lastActionTimeout) clearTimeout(lastActionTimeout);
+    lastActionTimeout = setTimeout(() => {
+      banner.classList.remove('visible');
+      lastActionTimeout = null;
+    }, 10000);
+  }
+
+  function renderGrid() {
+    const container = document.getElementById('groupsRowsContainer');
+    container.innerHTML = '';
+    const groupsMap = buildGroupsMap();
+
+    Object.keys(groupsMap).sort().forEach(groupName => {
+      const ridersInGroup = groupsMap[groupName].slice().sort((a, b) => Number(a.id) - Number(b.id));
+      const baseLaps = currentGroupBaseLaps[groupName] || Math.min(...ridersInGroup.map(r => r.maxLaps));
+      const groupSection = document.createElement('div');
+      groupSection.className = 'group-row-section';
+      groupSection.innerHTML = `
+        <div class="group-row-title">
+          <div>${escapeHTML(groupName)}</div>
+          <span>Контрольная дистанция: ${baseLaps} кр. · Участников: ${ridersInGroup.length}</span>
+        </div>`;
+
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+
+      ridersInGroup.forEach(r => {
+        const btn = document.createElement('button');
+        btn.className = `rider-btn ${r.finishTime !== null ? 'finished' : ''}`;
+        btn.id = `btn-${cssSafeId(r.id)}`;
+        btn.innerHTML = `#${escapeHTML(r.id)}<span>Кр: ${r.lapsDone}/${r.maxLaps}</span>`;
+        if (r.finishTime === null) {
+          btn.style.background = getProgressColor(r.lapsDone, r.maxLaps);
+          btn.style.borderColor = 'rgba(0,0,0,0.08)';
+          btn.style.color = '#1b1b1f';
+        }
+
+        btn.addEventListener('pointerup', (e) => {
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          e.preventDefault();
+          recordLap(r.id);
+        });
+        grid.appendChild(btn);
+      });
+
+      groupSection.appendChild(grid);
+      container.appendChild(groupSection);
+    });
+
+    requestAnimationFrame(syncDeadZoneHeight);
+  }
+
+  function syncDeadZoneHeight() {
+    const buttonsArea = document.getElementById('groupsRowsContainer');
+    const deadZone = document.getElementById('scrollDeadZone');
+    if (buttonsArea && deadZone) {
+      deadZone.style.minHeight = buttonsArea.offsetHeight + 'px';
+    }
+  }
+
+  window.addEventListener('resize', () => {
+    requestAnimationFrame(syncDeadZoneHeight);
+  });
+
+  function recordLap(num) {
+    const r = riders[num];
+    if (!r || !isRaceStarted || !startTime) return;
+    if (r.finishTime !== null) return;
+
+    playClickSound();
+
+    const btn = document.getElementById(`btn-${cssSafeId(num)}`);
+    if (btn) flashButton(btn);
+
+    if (navigator.vibrate) navigator.vibrate(35);
+
+    const now = Date.now() - startTime;
+    actionHistory.push(cloneRiders());
+    if (actionHistory.length > 30) actionHistory.shift();
+    document.getElementById('undoBtn').style.display = 'inline-flex';
+
+    const groupBaseLaps = currentGroupBaseLaps[r.group] || r.maxLaps;
+    r.lapsDone++;
+    r.lapTimes.push(now);
+
+    showLastActionBanner(r.id, r.lapsDone, r.maxLaps, r.name);
+
+    let statusText = `Круг ${r.lapsDone}/${r.maxLaps}`;
+    const extraLaps = Math.max(0, r.maxLaps - groupBaseLaps);
+    const crossedBaseNow = r.lapsDone === groupBaseLaps;
+    const isExtraLap = r.lapsDone > groupBaseLaps;
+
+    if (crossedBaseNow && extraLaps > 0) {
+      r.controlFinishTime = now;
+      statusText = `Контрольная дистанция ${groupBaseLaps} кр. пройдена, пошёл доп. круг`;
+    }
+
+    if (isExtraLap) {
+      const extraNumber = r.lapsDone - groupBaseLaps;
+      statusText = `Доп. круг ${extraNumber}/${extraLaps}`;
+    }
+
+    let logText = `[${formatTime(now)}] №${num} (${r.name}) — ${statusText}`;
+
+    if (r.lapsDone >= r.maxLaps) {
+      r.finishTime = now;
+      logText += ' 🏁 ФИНИШ!';
+    }
+
+    let currentLogs = document.getElementById('logList').innerHTML.split('</div>');
+    currentLogs = currentLogs.filter(l => l.trim().length > 0).map(l => l + '</div>');
+    currentLogs.unshift(`<div>${escapeHTML(logText)}</div>`);
+    if (currentLogs.length > 50) currentLogs.length = 50;
+    document.getElementById('logList').innerHTML = currentLogs.join('');
+
+    updateButtonVisual(num);
+    updateTable();
+    saveToLocalStorage();
+  }
+
+  function updateButtonVisual(num) {
+    const r = riders[num];
+    const btn = document.getElementById(`btn-${cssSafeId(num)}`);
+    if (!r || !btn) return;
+
+    btn.innerHTML = `#${escapeHTML(r.id)}<span>Кр: ${r.lapsDone}/${r.maxLaps}</span>`;
+    if (r.finishTime !== null) {
+      btn.classList.add('finished');
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    } else {
+      btn.classList.remove('finished');
+      btn.style.background = getProgressColor(r.lapsDone, r.maxLaps);
+      btn.style.borderColor = 'rgba(0,0,0,0.08)';
+      btn.style.color = '#1b1b1f';
+    }
+  }
+
+  function undoLastAction() {
+    if (actionHistory.length === 0) return;
+    riders = actionHistory.pop();
+    if (actionHistory.length === 0) document.getElementById('undoBtn').style.display = 'none';
+
+    let currentLogs = document.getElementById('logList').innerHTML.split('</div>');
+    currentLogs = currentLogs.filter(l => l.trim().length > 0).map(l => l + '</div>');
+    currentLogs.unshift(`<div style="color:#ffb4b0;">↩ Отменено последнее действие</div>`);
+    if (currentLogs.length > 50) currentLogs.length = 50;
+    document.getElementById('logList').innerHTML = currentLogs.join('');
+
+    recalculateGroupBaseLaps();
+    renderGrid();
+    updateTable();
+    saveToLocalStorage();
+  }
+
+  function resetRaceData() {
+    if (!confirm('Вы уверены, что хотите обнулить результаты?')) return;
+    clearInterval(timerInterval);
+    timerInterval = null;
+    stopAutoSave();
+    Object.keys(riders).forEach(id => {
+      riders[id].lapsDone = 0;
+      riders[id].finishTime = null;
+      riders[id].controlFinishTime = null;
+      riders[id].lapTimes = [];
+    });
+    isRaceStarted = false;
+    startTime = null;
+    actionHistory = [];
+    document.getElementById('undoBtn').style.display = 'none';
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('startBtn').innerText = '▶ Старт';
+    document.getElementById('logList').innerHTML = 'Гонка сброшена.';
+    document.getElementById('raceHint').innerText = 'Нажимайте на номер участника. До старта кнопки доступны, но круги не записываются.';
+    recalculateGroupBaseLaps();
+    updatePreview();
+    renderGrid();
+    updateTable();
+    showScreen('setup');
+    saveToLocalStorage();
+    releaseWakeLock();
+    setStabilityStatus(true, 'Система стабильна');
+  }
+
+  function clearAllRidersCompletely() {
+    if (!confirm('Удалить всех участников?')) return;
+    riders = {};
+    currentGroupBaseLaps = {};
+    actionHistory = [];
+    isRaceStarted = false;
+    startTime = null;
+    clearInterval(timerInterval);
+    timerInterval = null;
+    stopAutoSave();
+    document.getElementById('logList').innerHTML = 'Гонка не запущена.';
+    document.getElementById('undoBtn').style.display = 'none';
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('startBtn').innerText = '▶ Старт';
+    updatePreview();
+    showScreen('setup');
+    saveToLocalStorage();
+    releaseWakeLock();
+    setStabilityStatus(true, 'Система стабильна');
+  }
+
+  function goToResultsScreen() {
+    updateTable();
+    showScreen('results');
+    saveToLocalStorage();
+  }
+
+  function backToRace() {
+    showScreen('race');
+  }
+
+  function toggleLiveTable() {
+    liveTableCollapsed = !liveTableCollapsed;
+    const container = document.getElementById('liveResultsContainer');
+    const btn = document.getElementById('liveTableToggleBtn');
+    if (!container || !btn) return;
+
+    container.style.display = liveTableCollapsed ? 'none' : 'block';
+    btn.innerText = liveTableCollapsed ? 'Показать live-таблицу' : 'Скрыть live-таблицу';
+  }
+
+  function finishStatus(r) {
+    const base = currentGroupBaseLaps[r.group] || r.maxLaps;
+    if (r.finishTime !== null) return { text: 'Финиш', cls: 'pill-green' };
+    if (r.maxLaps > base && r.lapsDone === base) return { text: 'Пошёл доп. круг', cls: 'pill-orange' };
+    if (r.maxLaps > base && r.lapsDone > base) return { text: `Доп. круг ${r.lapsDone - base}`, cls: 'pill-orange' };
+    if (r.lapsDone > 0) return { text: 'В гонке', cls: 'pill-blue' };
+    return { text: 'Не стартовал', cls: 'pill-red' };
+  }
+
+  function calcResultTime(r) {
+    if (r.finishTime !== null) return formatTime(r.finishTime);
+    if (r.controlFinishTime !== null) return formatTime(r.controlFinishTime);
+    if (r.lapsDone > 0) return formatTime(r.lapTimes[r.lapTimes.length - 1]);
+    return '—';
+  }
+
+  function calcGap(r, leader) {
+    if (!leader) return '—';
+    if (r.id === leader.id) return '—';
+
+    const leaderBase = currentGroupBaseLaps[leader.group] || leader.maxLaps;
+    const riderBase = currentGroupBaseLaps[r.group] || r.maxLaps;
+    const leaderRef = leader.finishTime ?? leader.controlFinishTime ?? leader.lapTimes[leader.lapTimes.length - 1] ?? 0;
+    const riderRef = r.finishTime ?? r.controlFinishTime ?? r.lapTimes[r.lapTimes.length - 1] ?? 0;
+
+    if (r.lapsDone < leader.lapsDone) {
+      const diff = leader.lapsDone - r.lapsDone;
+      return `+${diff} кр.`;
+    }
+
+    if (leaderRef > 0 && riderRef > 0) {
+      return `+${formatTime(riderRef - leaderRef)}`;
+    }
+
+    if (r.maxLaps > riderBase && r.lapsDone >= riderBase) return 'доп. круг';
+    return '—';
+  }
+
+  function updateTable() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      _renderTable();
+      renderQueued = false;
+    });
+  }
+
+  function _renderTable() {
+    const container = document.getElementById('resultsTablesContainer');
+    const liveContainer = document.getElementById('liveResultsContainer');
+    if (liveContainer) liveContainer.innerHTML = '';
+    container.innerHTML = '';
+    const groupsMap = buildGroupsMap();
+
+    Object.keys(groupsMap).sort().forEach(groupName => {
+      const group = groupsMap[groupName].slice();
+      const baseLaps = currentGroupBaseLaps[groupName] || Math.min(...group.map(r => r.maxLaps));
+      const maxLaps = Math.max(...group.map(r => r.maxLaps));
+
+      const sorted = group.sort((a, b) => {
+        const scoreA = a.finishTime !== null ? a.maxLaps : a.controlFinishTime !== null ? a.lapsDone : a.lapsDone;
+        const scoreB = b.finishTime !== null ? b.maxLaps : b.controlFinishTime !== null ? b.lapsDone : b.lapsDone;
+        if (scoreA !== scoreB) return scoreB - scoreA;
+
+        const timeA = a.finishTime ?? a.controlFinishTime ?? a.lapTimes[a.lapTimes.length - 1] ?? 0;
+        const timeB = b.finishTime ?? b.controlFinishTime ?? b.lapTimes[b.lapTimes.length - 1] ?? 0;
+        return timeA - timeB;
+      });
+
+      const leader = sorted[0] || null;
+      const block = document.createElement('div');
+      block.className = 'results-group-block';
+      block.innerHTML = `
+        <div class="results-group-header">${escapeHTML(groupName)} · базовая дистанция ${baseLaps} кр. · доп. кругов до ${maxLaps - baseLaps}</div>`;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'table-responsive';
+      let html = `<table class="results-table"><thead><tr>
+        <th>Место</th>
+        <th>Номер</th>
+        <th>ФИО участника</th>
+        <th>Кругов</th>
+        <th>Дист.</th>
+        <th>Статус</th>
+        <th>База/Финиш</th>
+        <th>Отставание</th>`;
+
+      const showAllLaps = activeScreen === 'results';
+      const visibleLapCount = showAllLaps ? maxLaps : Math.min(maxLaps, 6);
+
+      let startLapIndex = 0;
+      if (!showAllLaps) {
+        const leaderCurrentLap = Math.max(...sorted.map(r => r.lapsDone || 0));
+        startLapIndex = Math.max(0, leaderCurrentLap - visibleLapCount);
+      }
+
+      for (let i = startLapIndex + 1; i <= startLapIndex + visibleLapCount; i++) {
+        html += `<th>Кр.${i}</th>`;
+      }
+      html += `</tr></thead><tbody></tbody></table>`;
+      wrap.innerHTML = html;
+      const tbody = wrap.querySelector('tbody');
+
+      sorted.forEach((r, idx) => {
+        const status = finishStatus(r);
+        const baseTime = r.controlFinishTime !== null ? formatTime(r.controlFinishTime) : '—';
+        const finalTime = r.finishTime !== null ? formatTime(r.finishTime) : '—';
+        const rowGap = calcGap(r, leader);
+
+        const row = document.createElement('tr');
+        let rowHTML = `
+          <td><strong>${idx + 1}</strong></td>
+          <td>#${escapeHTML(r.id)}</td>
+          <td><strong>${escapeHTML(r.name)}</strong></td>
+          <td>${r.lapsDone}</td>
+          <td>${r.maxLaps}</td>
+          <td><span class="status-pill ${status.cls}">${status.text}</span></td>
+          <td>${r.maxLaps > baseLaps ? `${baseTime} / ${finalTime}` : finalTime}</td>
+          <td><strong>${rowGap}</strong></td>`;
+
+        for (let i = startLapIndex; i < startLapIndex + visibleLapCount; i++) {
+          rowHTML += `<td>${r.lapTimes[i] ? formatTime(r.lapTimes[i]) : '—'}</td>`;
+        }
+        row.innerHTML = rowHTML;
+        tbody.appendChild(row);
+      });
+
+      block.appendChild(wrap);
+      container.appendChild(block);
+
+      if (liveContainer) {
+        const liveClone = block.cloneNode(true);
+        liveContainer.appendChild(liveClone);
+      }
+    });
+  }
+
+  function exportToCSV() {
+    if (Object.keys(riders).length === 0) {
+      showToast('⚠️ Нет данных для экспорта', 'warn', 2500);
+      return;
+    }
+    const groupsMap = buildGroupsMap();
+    let csv = '\uFEFF';
+    Object.keys(groupsMap).sort().forEach(groupName => {
+      const group = groupsMap[groupName].slice();
+      if (group.length === 0) return;
+      const baseLaps = currentGroupBaseLaps[groupName] || Math.min(...group.map(r => r.maxLaps));
+      const maxLaps = Math.max(...group.map(r => r.maxLaps));
+
+      csv += `\n=== КАТЕГОРИЯ: ${groupName.toUpperCase()} ===\n`;
+      let header = 'Место;Номер;ФИО участника;Кругов;Всего кругов;Статус;База/Финиш;Отставание';
+      for (let i = 1; i <= maxLaps; i++) header += `;Круг ${i}`;
+      csv += header + '\n';
+
+      const sorted = group.sort((a, b) => {
+        const scoreA = a.finishTime !== null ? a.maxLaps : a.controlFinishTime !== null ? a.lapsDone : a.lapsDone;
+        const scoreB = b.finishTime !== null ? b.maxLaps : b.controlFinishTime !== null ? b.lapsDone : b.lapsDone;
+        if (scoreA !== scoreB) return scoreB - scoreA;
+        const timeA = a.finishTime ?? a.controlFinishTime ?? a.lapTimes[a.lapTimes.length - 1] ?? 0;
+        const timeB = b.finishTime ?? b.controlFinishTime ?? b.lapTimes[b.lapTimes.length - 1] ?? 0;
+        return timeA - timeB;
+      });
+      const leader = sorted[0] || null;
+
+      sorted.forEach((r, idx) => {
+        const status = finishStatus(r).text;
+        const baseTime = r.controlFinishTime !== null ? formatTime(r.controlFinishTime) : '—';
+        const finalTime = r.finishTime !== null ? formatTime(r.finishTime) : '—';
+        const gap = calcGap(r, leader);
+        let row = `${idx + 1};${safeCsv(r.id)};${safeCsv(r.name)};${r.lapsDone};${r.maxLaps};${safeCsv(status)};${safeCsv(r.maxLaps > baseLaps ? `${baseTime} / ${finalTime}` : finalTime)};${safeCsv(gap)}`;
+        for (let i = 0; i < maxLaps; i++) row += `;${r.lapTimes[i] ? formatTime(r.lapTimes[i]) : '—'}`;
+        csv += row + '\n';
+      });
+    });
+
+    try {
+      downloadText(csv, 'timing_results.csv', 'text/csv;charset=utf-8');
+      showToast('✅ CSV готов к сохранению', 'success', 2500);
+    } catch(e) {
+      showToast('❌ Ошибка экспорта CSV', 'error', 3000);
+    }
+  }
+
+  function exportToHTML() {
+    if (Object.keys(riders).length === 0) {
+      showToast('⚠️ Нет данных для экспорта', 'warn', 2500);
+      return;
+    }
+    const container = document.getElementById('resultsTablesContainer');
+    const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Итоговый протокол</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:20px;color:#111}
+      h1,h2{margin-top:0}
+      table{border-collapse:collapse;width:100%;margin-bottom:22px}
+      th,td{border:1px solid #ccc;padding:8px;font-size:13px;white-space:nowrap;text-align:left}
+      th{background:#f3f3f3}
+      .group{margin-bottom:28px}
+      .meta{color:#555;font-size:13px;margin-bottom:10px}
+      @media print{button{display:none}}
+    </style></head><body>
+    <h1>Итоговые результаты</h1>
+    <div class="meta">Сформировано: ${new Date().toLocaleString('ru-RU')}</div>
+    ${container.innerHTML}
+    </body></html>`;
+    try {
+      downloadText(html, 'timing_results.html', 'text/html;charset=utf-8');
+      showToast('✅ HTML готов к сохранению', 'success', 2500);
+    } catch(e) {
+      showToast('❌ Ошибка экспорта HTML', 'error', 3000);
+    }
+  }
+
+  // ===== Download / Share — works on iOS Safari, Android, Desktop =====
+  function downloadText(text, filename, mime) {
+    const blob = new Blob([text], { type: mime });
+    const file = new File([blob], filename, { type: mime });
+
+    // Try Web Share API first (works great on iOS Safari)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: filename
+      }).then(() => {
+        showToast('✅ Файл отправлен', 'success', 2000);
+      }).catch(err => {
+        if (err.name !== 'AbortError') {
+          // User didn't cancel — fall back to blob download
+          fallbackDownload(blob, filename, mime);
+        }
+      });
+      return;
+    }
+
+    // Fallback for desktop / old browsers
+    fallbackDownload(blob, filename, mime);
+  }
+
+  function fallbackDownload(blob, filename, mime) {
+    // Try <a download> first
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+
+    // On iOS Safari, download attribute may not work — open in new tab after short delay
+    setTimeout(() => {
+      a.remove();
+      // If we detect iOS and the blob is still there, open in new tab as fallback
+      if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const win = window.open('', '_blank');
+          if (win) {
+            if (mime.includes('text/html')) {
+              win.document.write(reader.result);
+              win.document.close();
+            } else {
+              win.document.write('<html><head><title>' + escapeHTML(filename) + '</title><style>body{font-family:monospace;white-space:pre-wrap;padding:20px;}</style></head><body>' + escapeHTML(reader.result) + '</body></html>');
+              win.document.close();
+            }
+          }
+        };
+        reader.readAsText(blob);
+      }
+      URL.revokeObjectURL(url);
+    }, 500);
+  }
+
+  function cloneRiders() {
+    return JSON.parse(JSON.stringify(riders));
+  }
+
+  function safeCsv(value) {
+    return String(value ?? '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+  }
+
+  function escapeHTML(str) {
+    return String(str ?? '').replace(/[&<>"]+/g, s => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;'
+    })[s] || s);
+  }
+
+  function escapeAttr(str) {
+    return String(str ?? '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  }
+
+  function cssSafeId(str) {
+    return String(str ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  }
+
+  window.addEventListener('beforeprint', () => {
+    if (activeScreen !== 'results') {
+      updateTable();
+      showScreen('results');
+    }
+  });
+</script>
+</body>
+</html>
