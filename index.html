@@ -42,7 +42,8 @@
     html {
       margin: 0;
       padding: 0;
-      overflow-x: hidden;
+      /* clip hides overflow WITHOUT creating a scroll container — sticky still works */
+      overflow-x: clip;
       overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
       -webkit-text-size-adjust: 100%;
@@ -55,7 +56,8 @@
       margin: 0;
       padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
       box-sizing: border-box;
-      overflow-x: hidden;
+      /* clip, NOT hidden — hidden breaks position: sticky */
+      overflow-x: clip;
       touch-action: manipulation;
       -webkit-overflow-scrolling: touch;
     }
@@ -67,7 +69,6 @@
     .app {
       max-width: 980px;
       margin: 0 auto;
-      overflow-x: hidden;
     }
 
     h2, h3, p {
@@ -240,17 +241,18 @@
     }
     .step-chip.active { background: var(--blue); color: #fff; }
 
-    /* Timer bar — normal scrolling block, no sticky/fixed/relative */
+    /* Timer bar — STICKS to top. Solid opaque bg = no iOS bugs */
     .timer-bar {
+      position: -webkit-sticky;
+      position: sticky;
+      top: 0;
+      z-index: 20;
       background: var(--card);
-      border: 1px solid rgba(127,127,127,0.15);
+      border: 1px solid var(--line);
       box-shadow: var(--shadow);
       border-radius: var(--radius);
       padding: 12px;
-      margin-bottom: 12px;
-      /* Force iOS 16 to render this as a normal block */
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
+      margin-bottom: 14px;
     }
 
     .timer-banner {
@@ -806,8 +808,8 @@
       </div>
     </div>
 
-    <div class="card screen" id="raceScreen">
-      <div class="timer-bar no-print">
+    <!-- Timer bar: separate block, scrolls with the page -->
+    <div class="timer-bar screen no-print" id="timerBarBlock">
         <div class="timer-banner">
           <div>
             <div class="muted small" style="margin-bottom: 4px;">Текущее время</div>
@@ -827,8 +829,9 @@
           </div>
         </div>
         <div class="last-action-banner" id="lastActionBanner">—</div>
-      </div>
+    </div>
 
+    <div class="card screen" id="raceScreen">
       <div class="hint-box no-print" id="raceHint" style="margin-bottom: 12px;">
         Нажимайте на номер участника. До старта кнопки доступны, но круги не записываются.
       </div>
@@ -1432,6 +1435,8 @@
     document.getElementById('setupScreen').classList.toggle('active', name === 'setup');
     document.getElementById('raceScreen').classList.toggle('active', name === 'race');
     document.getElementById('resultsScreen').classList.toggle('active', name === 'results');
+    // Timer bar is outside the card — toggle its visibility too
+    document.getElementById('timerBarBlock').classList.toggle('active', name === 'race');
     document.getElementById('chip1').classList.toggle('active', name === 'setup');
     document.getElementById('chip2').classList.toggle('active', name === 'race');
     document.getElementById('chip3').classList.toggle('active', name === 'results');
