@@ -435,6 +435,9 @@
       box-shadow: 0 0 0 4px rgba(255,149,0,0.7), 0 0 30px rgba(255,149,0,0.5), 0 0 60px rgba(255,149,0,0.2);
       border-color: var(--orange) !important;
     }
+    
+    .rider-btn.penultimate { background: var(--orange); color: #fff; border-color: var(--orange); }
+    .rider-btn.penultimate span { color: #fff; opacity: .92; }
 
     .btn-sound {
       background: transparent;
@@ -780,6 +783,12 @@
           <label for="csvFileInput" class="file-input-label">📂 Выбрать CSV-файл</label>
           <input type="file" id="csvFileInput" accept=".csv,text/csv" class="hidden-input" onchange="handleCSVImport(this)">
           <span id="importStatus" style="margin-left: 12px; font-weight: 700; color: var(--muted);">Файл не выбран</span>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <h3 style="margin-bottom: 8px; font-size: 15px;">Или вставьте текст (Номер;Группа;Кругов;ФИО):</h3>
+          <textarea id="csvTextInput" placeholder="1;Элита;3;Иванов Иван&#10;2;Мастера;3;Петров Петр" style="width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; min-height:80px; padding:12px 14px; font-size:14px; background:var(--card); color:var(--text); outline:none; resize:vertical; font-family:inherit;"></textarea>
+          <button class="btn btn-blue" onclick="handleCSVTextImport()" style="margin-top:8px; min-height:42px; padding:10px 14px;">Загрузить текст</button>
         </div>
 
         <hr class="divider">
@@ -1517,6 +1526,40 @@
     reader.readAsText(file, 'UTF-8');
   }
 
+  function handleCSVTextImport() {
+    const textarea = document.getElementById('csvTextInput');
+    const text = String(textarea.value || '');
+    if (!text.trim()) {
+      alert('Введите данные!');
+      return;
+    }
+    
+    const lines = text.split(/\r?\n/);
+    let imported = 0;
+
+    lines.forEach(line => {
+      if (!line.trim()) return;
+      const columns = line.split(';');
+      if (columns.length < 3) return;
+
+      const id = columns[0].trim();
+      if (!id) return;
+      const group = columns[1].trim() || 'Без группы';
+      const maxLaps = parseInt(columns[2].trim(), 10) || 1;
+      const name = columns[3] ? columns[3].trim() : `Участник ${id}`;
+
+      riders[id] = createRider(id, group, maxLaps, name);
+      imported++;
+    });
+
+    recalculateGroupBaseLaps();
+    document.getElementById('importStatus').innerText = `✅ Добавлено из текста: ${imported}`;
+    document.getElementById('importStatus').style.color = 'var(--green)';
+    updatePreview();
+    saveToLocalStorage();
+    textarea.value = ''; // clear after import
+  }
+
   function recalculateGroupBaseLaps() {
     currentGroupBaseLaps = {};
     const groupsMap = buildGroupsMap();
@@ -1717,9 +1760,13 @@
         btn.id = `btn-${cssSafeId(r.id)}`;
         btn.innerHTML = `#${escapeHTML(r.id)}<span>Кр: ${r.lapsDone}/${r.maxLaps}</span>`;
         if (r.finishTime === null) {
-          btn.style.background = getProgressColor(r.lapsDone, r.maxLaps);
-          btn.style.borderColor = 'rgba(0,0,0,0.08)';
-          btn.style.color = '#1b1b1f';
+          if (r.lapsDone === r.maxLaps - 1 && r.lapsDone > 0) {
+            btn.classList.add('penultimate');
+          } else {
+            btn.style.background = getProgressColor(r.lapsDone, r.maxLaps);
+            btn.style.borderColor = 'rgba(0,0,0,0.08)';
+            btn.style.color = '#1b1b1f';
+          }
         }
 
         btn.addEventListener('pointerup', (e) => {
@@ -1813,14 +1860,23 @@
     btn.innerHTML = `#${escapeHTML(r.id)}<span>Кр: ${r.lapsDone}/${r.maxLaps}</span>`;
     if (r.finishTime !== null) {
       btn.classList.add('finished');
+      btn.classList.remove('penultimate');
       btn.style.background = '';
       btn.style.borderColor = '';
       btn.style.color = '';
     } else {
       btn.classList.remove('finished');
-      btn.style.background = getProgressColor(r.lapsDone, r.maxLaps);
-      btn.style.borderColor = 'rgba(0,0,0,0.08)';
-      btn.style.color = '#1b1b1f';
+      if (r.lapsDone === r.maxLaps - 1 && r.lapsDone > 0) {
+        btn.classList.add('penultimate');
+        btn.style.background = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      } else {
+        btn.classList.remove('penultimate');
+        btn.style.background = getProgressColor(r.lapsDone, r.maxLaps);
+        btn.style.borderColor = 'rgba(0,0,0,0.08)';
+        btn.style.color = '#1b1b1f';
+      }
     }
   }
 
