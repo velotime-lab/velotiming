@@ -1060,21 +1060,37 @@
   let soundEnabled = true;
   let audioCtx = null;
   let audioNeedsResume = false;
+  let silentOscillator = null;
 
-  // ===== Touch-based AudioContext resume for iOS =====
+  // ===== Variant 1: Enhanced Touch-based AudioContext resume for iOS =====
   // iOS only allows audioCtx.resume() during a user gesture (touch/click).
-  // visibilitychange is NOT a user gesture, so we set a flag on background
-  // and resume on the very next touch event.
   function attachAudioResumeListener() {
     const handler = () => {
+      if (!audioCtx) {
+        getAudioContext();
+      }
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => { audioNeedsResume = false; }).catch(() => {});
+      }
+      // ===== Variant 2: Start continuous silent oscillator =====
+      // This prevents the OS from suspending the audio context when idle
+      if (audioCtx && audioCtx.state === 'running' && !silentOscillator) {
+        try {
+          silentOscillator = audioCtx.createOscillator();
+          const silentGain = audioCtx.createGain();
+          silentGain.gain.value = 0; // completely silent
+          silentOscillator.connect(silentGain);
+          silentGain.connect(audioCtx.destination);
+          silentOscillator.start();
+        } catch(e) {}
       }
     };
     document.addEventListener('touchstart', handler, { passive: true });
     document.addEventListener('touchend', handler, { passive: true });
     document.addEventListener('mousedown', handler, { passive: true });
     document.addEventListener('pointerdown', handler, { passive: true });
+    document.addEventListener('click', handler, { passive: true });
+    document.addEventListener('keydown', handler, { passive: true });
   }
   attachAudioResumeListener();
 
