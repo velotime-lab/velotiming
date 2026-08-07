@@ -111,6 +111,7 @@
     .btn-green { background: var(--green); color: #fff; }
     .btn-red { background: var(--red); color: #fff; }
     .btn-orange { background: var(--orange); color: #fff; }
+    .btn-gray { background: var(--line); color: var(--text); }
     .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
 
     .btn-wide { width: 100%; font-size: 18px; padding: 18px 16px; }
@@ -751,6 +752,37 @@
       thead { display: table-header-group; }
       tr, .results-group-block { page-break-inside: avoid; }
     }
+
+    /* ===== Compact Mobile Mode ===== */
+    body.compact-mode .rider-btn {
+      min-height: 60px;
+      padding: 6px 4px;
+      font-size: 18px;
+    }
+    body.compact-mode .rider-btn span {
+      font-size: 10px;
+    }
+    body.compact-mode .riders-group-block h3 {
+      font-size: 15px;
+      margin: 4px 0 6px 0;
+    }
+    body.compact-mode .riders-buttons-grid {
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 6px;
+    }
+    body.compact-mode .timer-bar .action-row .btn,
+    body.compact-mode .timer-bar .action-row .btn-sound {
+      padding: 6px 10px;
+      min-height: 36px;
+      font-size: 12px;
+    }
+    body.compact-mode .timer {
+      font-size: 28px;
+    }
+    body.compact-mode .btn-wide {
+      padding: 12px 14px;
+      font-size: 15px;
+    }
   </style>
 </head>
 <body>
@@ -791,7 +823,10 @@
           <h2>Загрузка участников гонки</h2>
           <div class="muted small">Сначала импортируйте список, проверьте его и нажмите «Продолжить».</div>
         </div>
-        <div class="badge" id="totalRidersCount">0</div>
+        <div style="display:flex; align-items:center; gap: 8px;">
+          <button class="btn btn-ghost mobile-mode-btn" onclick="toggleMobileMode()" style="padding: 6px 12px; min-height: 32px; font-size: 13px;">📱</button>
+          <div class="badge" id="totalRidersCount">0</div>
+        </div>
       </div>
 
       <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;background:rgba(52,199,89,0.1);margin-top:8px;margin-bottom:4px;font-size:13px;color:var(--green);font-weight:700;">
@@ -875,12 +910,11 @@
             </div>
           </div>
           <div class="action-row">
-            <button class="btn btn-blue" onclick="toggleFullscreen()">⛶ Во весь экран</button>
+            <button class="btn btn-ghost mobile-mode-btn" onclick="toggleMobileMode()">📱</button>
             <button class="btn btn-green" id="startBtn" onclick="startRace()">▶ Старт</button>
             <button class="btn btn-red" id="undoBtn" onclick="undoLastAction()" style="display:none;">↩ Отменить круг</button>
             <button class="btn btn-orange" onclick="goToResultsScreen()">Результаты</button>
-            <button class="btn btn-ghost" onclick="resetRaceData()">Сбросить</button>
-            <button class="btn-sound active" id="soundToggleBtn" onclick="toggleSound()" title="Вкл/Выкл звук нажатия">🔊</button>
+            <button class="btn btn-gray" onclick="resetRaceData()">Сбросить</button>
           </div>
         </div>
         <div class="last-action-banner" id="lastActionBanner">—</div>
@@ -1056,182 +1090,17 @@
     textEl.textContent = text || (ok ? 'Система стабильна' : 'Внимание');
   }
 
-  // ===== Sound System =====
-  let soundEnabled = true;
-  let audioCtx = null;
-  let audioNeedsResume = false;
-  let silentOscillator = null;
+  // ===== Sound System (Removed) =====
+  function playClickSound() {}
+  function playStartHorn() { safeVibrate([100, 80, 100, 80, 300]); }
 
-  // ===== Touch-based AudioContext resume for iOS =====
-  // iOS only allows audioCtx.resume() during a user gesture (touch/click).
-  function attachAudioResumeListener() {
-    const handler = () => {
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume().then(() => { audioNeedsResume = false; }).catch(() => {});
-      }
-      
-      // Ping the audio context with a tiny silent oscillator on every interaction
-      // to keep it alive and wake it up if it went to sleep
-      if (audioCtx && audioCtx.state === 'running') {
-        try {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          gain.gain.value = 0;
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start(audioCtx.currentTime);
-          osc.stop(audioCtx.currentTime + 0.01);
-        } catch(e) {}
-      }
-    };
-    document.addEventListener('touchstart', handler, { passive: true });
-    document.addEventListener('touchend', handler, { passive: true });
-    document.addEventListener('mousedown', handler, { passive: true });
-    document.addEventListener('pointerdown', handler, { passive: true });
-    document.addEventListener('click', handler, { passive: true });
-    document.addEventListener('keydown', handler, { passive: true });
-  }
-  attachAudioResumeListener();
-
-  function getAudioContext() {
-    if (!audioCtx) {
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      } catch(e) {
-        return null;
-      }
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume().then(() => {
-        audioNeedsResume = false;
-      }).catch(() => {
-        audioNeedsResume = true;
-      });
-    }
-    return audioCtx;
-  }
-
-  function playClickSound() {
-    if (!soundEnabled) return;
-    try {
-      const ctx = getAudioContext();
-      if (!ctx) return;
-      // Small offset gives resume() time during the user gesture on iOS
-      const offset = ctx.state === 'running' ? 0 : 0.06;
-      const now = ctx.currentTime + offset;
-
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(1200, now);
-      oscillator.frequency.exponentialRampToValueAtTime(600, now + 0.06);
-
-      gainNode.gain.setValueAtTime(0.3, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      oscillator.start(now);
-      oscillator.stop(now + 0.15);
-    } catch (e) {}
-  }
-
-  // ===== Safe vibration — iOS does NOT support navigator.vibrate() =====
+  // ===== Safe vibration =====
   function safeVibrate(pattern) {
     try {
-      if (navigator.vibrate && typeof navigator.vibrate === 'function') {
+      if (navigator.vibrate && typeof navigator.vibrate === "function") {
         navigator.vibrate(pattern);
       }
-      // iOS Safari has never supported Vibration API — no workaround possible.
-      // Play a short low-freq audio "thump" as a substitute haptic.
-      playHapticTick();
     } catch(e) {}
-  }
-
-  // Short audio thump as a "haptic" substitute (works on iOS through speakers)
-  function playHapticTick() {
-    try {
-      const ctx = audioCtx || getAudioContext();
-      if (!ctx || ctx.state !== 'running') return;
-
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.exponentialRampToValueAtTime(60, now + 0.04);
-
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.06);
-    } catch(e) {}
-  }
-
-  // ===== Start Race Horn Sound — 3-tone ascending signal =====
-  function playStartHorn() {
-    try {
-      const ctx = getAudioContext();
-      if (!ctx) return;
-
-      const now = ctx.currentTime;
-
-      // Three ascending tones: 440Hz -> 660Hz -> 880Hz
-      const tones = [
-        { freq: 440, start: 0,    dur: 0.25 },
-        { freq: 660, start: 0.30, dur: 0.25 },
-        { freq: 880, start: 0.60, dur: 0.50 }
-      ];
-
-      tones.forEach(t => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(t.freq, now + t.start);
-
-        // Smooth envelope to avoid clicking
-        gain.gain.setValueAtTime(0, now + t.start);
-        gain.gain.linearRampToValueAtTime(0.25, now + t.start + 0.02);
-        gain.gain.setValueAtTime(0.25, now + t.start + t.dur - 0.03);
-        gain.gain.linearRampToValueAtTime(0, now + t.start + t.dur);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(now + t.start);
-        osc.stop(now + t.start + t.dur + 0.01);
-      });
-
-      // Vibrate pattern: short-short-long
-      safeVibrate([100, 80, 100, 80, 300]);
-    } catch (e) {}
-  }
-
-  function toggleSound() {
-    soundEnabled = !soundEnabled;
-    const btn = document.getElementById('soundToggleBtn');
-    if (soundEnabled) {
-      btn.textContent = '🔊';
-      btn.classList.add('active');
-    } else {
-      btn.textContent = '🔇';
-      btn.classList.remove('active');
-    }
-    try {
-      localStorage.setItem('soundEnabled', JSON.stringify(soundEnabled));
-    } catch(e) {}
-
-    if (soundEnabled) {
-      playClickSound();
-    }
   }
 
   // ===== Wake Lock =====
@@ -1269,15 +1138,20 @@
   }
 
   // ===== Fullscreen =====
-  function toggleFullscreen() {
-    try {
-      const doc = document.documentElement;
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        doc.requestFullscreen?.() || doc.webkitRequestFullscreen?.();
+
+
+  function toggleMobileMode() {
+    document.body.classList.toggle('compact-mode');
+    const btns = document.querySelectorAll('.mobile-mode-btn');
+    btns.forEach(btn => {
+      if (document.body.classList.contains('compact-mode')) {
+        btn.classList.add('btn-blue');
+        btn.classList.remove('btn-ghost');
       } else {
-        document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+        btn.classList.remove('btn-blue');
+        btn.classList.add('btn-ghost');
       }
-    } catch(e) {}
+    });
   }
 
   // ===== Data Persistence — Robust save/load =====
@@ -1395,13 +1269,7 @@
         // Re-request wake lock
         requestWakeLock();
 
-        // iOS AudioContext often gets permanently stuck/interrupted in background.
-        // The most reliable fix is to close it and let the next touch recreate it.
-        if (audioCtx) {
-          try { audioCtx.close(); } catch(e) {}
-          audioCtx = null;
-          audioNeedsResume = false;
-        }
+
 
         // Verify timer interval is still running
         ensureTimerRunning();
@@ -1470,18 +1338,6 @@
         document.getElementById('lapDistance').value = savedLapDist;
       }
 
-      const savedSound = localStorage.getItem('soundEnabled');
-      if (savedSound !== null) {
-        soundEnabled = JSON.parse(savedSound);
-        const btn = document.getElementById('soundToggleBtn');
-        if (soundEnabled) {
-          btn.textContent = '🔊';
-          btn.classList.add('active');
-        } else {
-          btn.textContent = '🔇';
-          btn.classList.remove('active');
-        }
-      }
     } catch(e) {}
 
     // Restore race state
