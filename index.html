@@ -146,7 +146,7 @@
 
     .manual-grid {
       display: grid;
-      grid-template-columns: 110px 160px 110px 1fr auto;
+      grid-template-columns: 60px 100px 60px 1fr 90px 100px 90px auto;
       gap: 10px;
       align-items: center;
     }
@@ -277,6 +277,16 @@
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
+    }
+    
+    .timer-bar .action-row {
+      gap: 6px;
+    }
+    .timer-bar .action-row .btn,
+    .timer-bar .action-row .btn-sound {
+      padding: 8px 12px;
+      min-height: 40px;
+      font-size: 13px;
     }
 
     .groups-meta {
@@ -718,9 +728,8 @@
 
     @media (max-width: 860px) {
       .manual-grid { grid-template-columns: 1fr 1fr; }
-      .manual-grid > *:nth-child(3),
       .manual-grid > *:nth-child(4),
-      .manual-grid > *:nth-child(5) { grid-column: span 2; }
+      .manual-grid > *:nth-child(8) { grid-column: span 2; }
       .btn-wide { font-size: 17px; }
       .timer-banner { align-items: flex-start; }
       .results-table { min-width: auto; }
@@ -733,10 +742,14 @@
       .card { box-shadow: none; border: 0; margin: 0; padding: 0; }
       .screen { display: none !important; }
       #resultsScreen { display: block !important; }
-      .results-table { min-width: 100% !important; }
-      .table-responsive { overflow: visible; }
+      .results-table { width: max-content !important; min-width: 0 !important; max-width: 100% !important; border-collapse: collapse; }
+      .results-table th, .results-table td { border: 1px solid #000; padding: 2px 4px; font-size: 9px; }
+      .table-responsive { overflow: visible !important; }
       .scroll-dead-zone { display: none !important; }
       .race-start-overlay, .toast-container { display: none !important; }
+      @page { size: A4 landscape; margin: 10mm; }
+      thead { display: table-header-group; }
+      tr, .results-group-block { page-break-inside: avoid; }
     }
   </style>
 </head>
@@ -752,6 +765,17 @@
 
   <!-- Toast notification container -->
   <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Custom Confirm Modal -->
+  <div class="race-start-overlay" id="customConfirmModal">
+    <div class="card" style="margin: 0 20px; max-width: 400px; width: 100%; text-align: center; padding: 24px;">
+      <h3 id="customConfirmText" style="margin-bottom: 20px; font-size: 18px; color: var(--text);">...</h3>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button class="btn btn-ghost" onclick="closeConfirmModal()">Отмена</button>
+        <button class="btn btn-red" id="customConfirmBtn">Подтвердить</button>
+      </div>
+    </div>
+  </div>
 
   <div class="app">
 
@@ -775,8 +799,27 @@
       </div>
 
       <div class="stack" style="margin-top: 14px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 8px;">
+          <div>
+            <label class="muted small" style="display:block; margin-bottom: 4px; font-weight: 600;">Название соревнований</label>
+            <input type="text" id="competitionName" placeholder="Например: Кубок..." onchange="saveToLocalStorage()">
+          </div>
+          <div>
+            <label class="muted small" style="display:block; margin-bottom: 4px; font-weight: 600;">Номер этапа</label>
+            <input type="text" id="eventStage" placeholder="Например: 1 этап" onchange="saveToLocalStorage()">
+          </div>
+          <div>
+            <label class="muted small" style="display:block; margin-bottom: 4px; font-weight: 600;">Место проведения</label>
+            <input type="text" id="eventLocation" placeholder="Например: Парк..." onchange="saveToLocalStorage()">
+          </div>
+          <div>
+            <label class="muted small" style="display:block; margin-bottom: 4px; font-weight: 600;">Расстояние одного круга</label>
+            <input type="text" id="lapDistance" placeholder="Например: 5 км" onchange="saveToLocalStorage()">
+          </div>
+        </div>
+
         <div class="hint-box">
-          <strong>CSV формат:</strong> <code>Номер;Группа;Кругов;ФИО</code>
+          <strong>CSV формат:</strong> <code>Номер;Группа;Кругов;ФИО;ДатаРождения;Город;№группы(год обучения)</code>
         </div>
 
         <div>
@@ -786,8 +829,8 @@
         </div>
 
         <div style="margin-top: 10px;">
-          <h3 style="margin-bottom: 8px; font-size: 15px;">Или вставьте текст (Номер;Группа;Кругов;ФИО):</h3>
-          <textarea id="csvTextInput" placeholder="1;Элита;3;Иванов Иван&#10;2;Мастера;3;Петров Петр" style="width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; min-height:80px; padding:12px 14px; font-size:14px; background:var(--card); color:var(--text); outline:none; resize:vertical; font-family:inherit;"></textarea>
+          <h3 style="margin-bottom: 8px; font-size: 15px;">Или вставьте текст (Номер;Группа;Кругов;ФИО;ДатаРождения;Город;№группы(год обучения)):</h3>
+          <textarea id="csvTextInput" placeholder="1;Элита;3;Иванов Иван;02.07.1990;Москва;Гр-1&#10;2;Мастера;3;Петров Петр;15.08.1985;СПб;Гр-2" style="width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:14px; min-height:80px; padding:12px 14px; font-size:14px; background:var(--card); color:var(--text); outline:none; resize:vertical; font-family:inherit;"></textarea>
           <button class="btn btn-blue" onclick="handleCSVTextImport()" style="margin-top:8px; min-height:42px; padding:10px 14px;">Загрузить текст</button>
         </div>
 
@@ -799,7 +842,10 @@
             <input type="text" id="manualId" placeholder="Номер" inputmode="numeric" pattern="[0-9]*">
             <input type="text" id="manualGroup" placeholder="Группа">
             <input type="number" id="manualLaps" placeholder="Кругов" min="1" value="3" inputmode="numeric">
-            <input type="text" id="manualName" placeholder="ФИО участника">
+            <input type="text" id="manualName" placeholder="ФИО">
+            <input type="text" id="manualYear" placeholder="Дата рожд.">
+            <input type="text" id="manualCity" placeholder="Город">
+            <input type="text" id="manualStudyGroup" placeholder="№ группы">
             <button class="btn btn-blue" onclick="addRiderManual()">+ Добавить</button>
           </div>
         </div>
@@ -877,6 +923,8 @@
         <div class="action-row">
           <button class="btn btn-blue" onclick="exportToCSV()">⬇ CSV</button>
           <button class="btn btn-ghost" onclick="exportToHTML()">⬇ HTML</button>
+          <button class="btn btn-blue" onclick="exportToProtocolHTML()">Итоговые протоколы HTML</button>
+          <button class="btn btn-blue" onclick="exportToProtocolHTML(true)">Итоговые протоколы HTML (без года обуч.)</button>
           <button class="btn btn-green" onclick="window.print()">🖨 PDF / Печать</button>
           <button class="btn btn-orange" onclick="backToRace()">← Назад</button>
         </div>
@@ -950,6 +998,30 @@
   let currentGroupBaseLaps = {};
   let autoSaveInterval = null;
   let saveErrorCount = 0;
+
+  // ===== Custom Confirm Modal =====
+  function showConfirmModal(message, onConfirm) {
+    const modal = document.getElementById('customConfirmModal');
+    const textEl = document.getElementById('customConfirmText');
+    const btnEl = document.getElementById('customConfirmBtn');
+    
+    textEl.textContent = message;
+    
+    // Create a new button to remove old event listeners
+    const newBtn = btnEl.cloneNode(true);
+    btnEl.parentNode.replaceChild(newBtn, btnEl);
+    
+    newBtn.addEventListener('click', () => {
+      closeConfirmModal();
+      if (onConfirm) onConfirm();
+    });
+    
+    modal.classList.add('visible');
+  }
+
+  function closeConfirmModal() {
+    document.getElementById('customConfirmModal').classList.remove('visible');
+  }
 
   // ===== Toast Notification System =====
   function showToast(message, type, duration) {
@@ -1200,6 +1272,10 @@
       localStorage.setItem('isRaceStarted', JSON.stringify(isRaceStarted));
       localStorage.setItem('actionHistory', JSON.stringify(actionHistory));
       localStorage.setItem('logHTML', document.getElementById('logList').innerHTML);
+      localStorage.setItem('competitionName', document.getElementById('competitionName') ? document.getElementById('competitionName').value : '');
+      localStorage.setItem('eventStage', document.getElementById('eventStage') ? document.getElementById('eventStage').value : '');
+      localStorage.setItem('eventLocation', document.getElementById('eventLocation') ? document.getElementById('eventLocation').value : '');
+      localStorage.setItem('lapDistance', document.getElementById('lapDistance') ? document.getElementById('lapDistance').value : '');
       if (isRaceStarted && startTime) {
         localStorage.setItem('startTime', String(startTime));
       }
@@ -1360,6 +1436,23 @@
   window.onload = function () {
     // Restore sound preference
     try {
+      const savedCompName = localStorage.getItem('competitionName');
+      if (savedCompName !== null && document.getElementById('competitionName')) {
+        document.getElementById('competitionName').value = savedCompName;
+      }
+      const savedEventStage = localStorage.getItem('eventStage');
+      if (savedEventStage !== null && document.getElementById('eventStage')) {
+        document.getElementById('eventStage').value = savedEventStage;
+      }
+      const savedEventLoc = localStorage.getItem('eventLocation');
+      if (savedEventLoc !== null && document.getElementById('eventLocation')) {
+        document.getElementById('eventLocation').value = savedEventLoc;
+      }
+      const savedLapDist = localStorage.getItem('lapDistance');
+      if (savedLapDist !== null && document.getElementById('lapDistance')) {
+        document.getElementById('lapDistance').value = savedLapDist;
+      }
+
       const savedSound = localStorage.getItem('soundEnabled');
       if (savedSound !== null) {
         soundEnabled = JSON.parse(savedSound);
@@ -1461,11 +1554,14 @@
     const group = document.getElementById('manualGroup').value.trim() || 'Без группы';
     const maxLaps = parseInt(document.getElementById('manualLaps').value, 10) || 1;
     const name = document.getElementById('manualName').value.trim() || `Участник ${id}`;
+    const year = document.getElementById('manualYear').value.trim() || '';
+    const city = document.getElementById('manualCity').value.trim() || '';
+    const studyGroup = document.getElementById('manualStudyGroup').value.trim() || '';
 
     if (!id) return alert('Введите номер!');
     if (riders[id]) return alert(`Участник №${id} уже есть!`);
 
-    riders[id] = createRider(id, group, maxLaps, name);
+    riders[id] = createRider(id, group, maxLaps, name, year, city, studyGroup);
     recalculateGroupBaseLaps();
     clearInputsAfterAdd();
     updatePreview();
@@ -1477,15 +1573,21 @@
     document.getElementById('manualName').value = '';
     document.getElementById('manualLaps').value = '3';
     document.getElementById('manualGroup').value = '';
+    document.getElementById('manualYear').value = '';
+    document.getElementById('manualCity').value = '';
+    document.getElementById('manualStudyGroup').value = '';
   }
 
-  function createRider(id, group, maxLaps, name) {
+  function createRider(id, group, maxLaps, name, year, city, studyGroup) {
     return {
       id: String(id),
       group,
       lapsDone: 0,
       maxLaps: Math.max(1, parseInt(maxLaps, 10) || 1),
       name,
+      year: year || '',
+      city: city || '',
+      studyGroup: studyGroup || '',
       finishTime: null,
       controlFinishTime: null,
       lapTimes: []
@@ -1512,8 +1614,11 @@
         const group = columns[1].trim() || 'Без группы';
         const maxLaps = parseInt(columns[2].trim(), 10) || 1;
         const name = columns[3] ? columns[3].trim() : `Участник ${id}`;
+        const year = columns[4] ? columns[4].trim() : '';
+        const city = columns[5] ? columns[5].trim() : '';
+        const studyGroup = columns[6] ? columns[6].trim() : '';
 
-        riders[id] = createRider(id, group, maxLaps, name);
+        riders[id] = createRider(id, group, maxLaps, name, year, city, studyGroup);
         imported++;
       });
 
@@ -1547,8 +1652,11 @@
       const group = columns[1].trim() || 'Без группы';
       const maxLaps = parseInt(columns[2].trim(), 10) || 1;
       const name = columns[3] ? columns[3].trim() : `Участник ${id}`;
+      const year = columns[4] ? columns[4].trim() : '';
+      const city = columns[5] ? columns[5].trim() : '';
+      const studyGroup = columns[6] ? columns[6].trim() : '';
 
-      riders[id] = createRider(id, group, maxLaps, name);
+      riders[id] = createRider(id, group, maxLaps, name, year, city, studyGroup);
       imported++;
     });
 
@@ -1585,6 +1693,9 @@
     document.getElementById('manualGroup').value = r.group;
     document.getElementById('manualLaps').value = r.maxLaps;
     document.getElementById('manualName').value = r.name;
+    document.getElementById('manualYear').value = r.year || '';
+    document.getElementById('manualCity').value = r.city || '';
+    document.getElementById('manualStudyGroup').value = r.studyGroup || '';
     delete riders[id];
     recalculateGroupBaseLaps();
     updatePreview();
@@ -1729,10 +1840,10 @@
 
     if (lastActionTimeout) clearTimeout(lastActionTimeout);
     if (undoBannerTimeout) clearTimeout(undoBannerTimeout);
-    lastActionTimeout = setTimeout(() => {
-      banner.classList.remove('visible');
-      lastActionTimeout = null;
-    }, 10000);
+    // lastActionTimeout = setTimeout(() => {
+    //   banner.classList.remove('visible');
+    //   lastActionTimeout = null;
+    // }, 10000);
   }
 
   function renderGrid() {
@@ -1938,61 +2049,63 @@
     if (lastActionTimeout) clearTimeout(lastActionTimeout);
     if (undoBannerTimeout) clearTimeout(undoBannerTimeout);
 
-    undoBannerTimeout = setTimeout(() => {
-      banner.classList.remove('visible', 'undo');
-      undoBannerTimeout = null;
-      lastActionTimeout = null;
-    }, 10000);
+    // undoBannerTimeout = setTimeout(() => {
+    //   banner.classList.remove('visible', 'undo');
+    //   undoBannerTimeout = null;
+    //   lastActionTimeout = null;
+    // }, 10000);
   }
 
   function resetRaceData() {
-    if (!confirm('Вы уверены, что хотите обнулить результаты?')) return;
-    clearInterval(timerInterval);
-    timerInterval = null;
-    stopAutoSave();
-    Object.keys(riders).forEach(id => {
-      riders[id].lapsDone = 0;
-      riders[id].finishTime = null;
-      riders[id].controlFinishTime = null;
-      riders[id].lapTimes = [];
+    showConfirmModal('Вы уверены, что хотите обнулить результаты?', () => {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      stopAutoSave();
+      Object.keys(riders).forEach(id => {
+        riders[id].lapsDone = 0;
+        riders[id].finishTime = null;
+        riders[id].controlFinishTime = null;
+        riders[id].lapTimes = [];
+      });
+      isRaceStarted = false;
+      startTime = null;
+      actionHistory = [];
+      document.getElementById('undoBtn').style.display = 'none';
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startBtn').innerText = '▶ Старт';
+      document.getElementById('logList').innerHTML = 'Гонка сброшена.';
+      document.getElementById('raceHint').innerText = 'Нажимайте на номер участника. До старта кнопки доступны, но круги не записываются.';
+      recalculateGroupBaseLaps();
+      updatePreview();
+      renderGrid();
+      updateTable();
+      showScreen('setup');
+      saveToLocalStorage();
+      releaseWakeLock();
+      setStabilityStatus(true, 'Система стабильна');
     });
-    isRaceStarted = false;
-    startTime = null;
-    actionHistory = [];
-    document.getElementById('undoBtn').style.display = 'none';
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('startBtn').innerText = '▶ Старт';
-    document.getElementById('logList').innerHTML = 'Гонка сброшена.';
-    document.getElementById('raceHint').innerText = 'Нажимайте на номер участника. До старта кнопки доступны, но круги не записываются.';
-    recalculateGroupBaseLaps();
-    updatePreview();
-    renderGrid();
-    updateTable();
-    showScreen('setup');
-    saveToLocalStorage();
-    releaseWakeLock();
-    setStabilityStatus(true, 'Система стабильна');
   }
 
   function clearAllRidersCompletely() {
-    if (!confirm('Удалить всех участников?')) return;
-    riders = {};
-    currentGroupBaseLaps = {};
-    actionHistory = [];
-    isRaceStarted = false;
-    startTime = null;
-    clearInterval(timerInterval);
-    timerInterval = null;
-    stopAutoSave();
-    document.getElementById('logList').innerHTML = 'Гонка не запущена.';
-    document.getElementById('undoBtn').style.display = 'none';
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('startBtn').innerText = '▶ Старт';
-    updatePreview();
-    showScreen('setup');
-    saveToLocalStorage();
-    releaseWakeLock();
-    setStabilityStatus(true, 'Система стабильна');
+    showConfirmModal('Удалить всех участников?', () => {
+      riders = {};
+      currentGroupBaseLaps = {};
+      actionHistory = [];
+      isRaceStarted = false;
+      startTime = null;
+      clearInterval(timerInterval);
+      timerInterval = null;
+      stopAutoSave();
+      document.getElementById('logList').innerHTML = 'Гонка не запущена.';
+      document.getElementById('undoBtn').style.display = 'none';
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startBtn').innerText = '▶ Старт';
+      updatePreview();
+      showScreen('setup');
+      saveToLocalStorage();
+      releaseWakeLock();
+      setStabilityStatus(true, 'Система стабильна');
+    });
   }
 
   function goToResultsScreen() {
@@ -2199,29 +2312,238 @@
     }
   }
 
+  function exportToProtocolHTML(hideGroupCol = false) {
+    if (Object.keys(riders).length === 0) {
+      showToast('⚠️ Нет данных для экспорта', 'warn', 2500);
+      return;
+    }
+    const compName = document.getElementById('competitionName') ? document.getElementById('competitionName').value : '';
+    const eventStageRaw = document.getElementById('eventStage') ? document.getElementById('eventStage').value : '';
+    const eventLoc = document.getElementById('eventLocation') ? document.getElementById('eventLocation').value : '';
+    const lapDistStr = document.getElementById('lapDistance') ? document.getElementById('lapDistance').value : '';
+    const lapDistNum = parseFloat(lapDistStr.replace(',', '.')) || 1.4;
+
+    let parsedStage = eventStageRaw.trim();
+    if (/^\d+$/.test(parsedStage)) {
+      const rom = {1:'I', 2:'II', 3:'III', 4:'IV', 5:'V', 6:'VI', 7:'VII', 8:'VIII', 9:'IX', 10:'X', 11:'XI', 12:'XII', 13:'XIII', 14:'XIV', 15:'XV'};
+      parsedStage = 'ЭТАП ' + (rom[parsedStage] || parsedStage);
+    }
+
+    let html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Протокол ${parsedStage}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:20px;color:#000;font-size:12px;margin:0;}
+      h1,h2,h3,h4{margin:5px 0;text-align:center;font-weight:normal;}
+      h2{font-weight:bold;font-size:18px;}
+      table{border-collapse:collapse;width:100%;margin-bottom:20px;font-size:12px;}
+      th,td{border:1px solid #000;padding:4px 6px;white-space:nowrap;text-align:center;}
+      th{background:#fff;font-weight:bold;}
+      td.align-left{text-align:left;}
+      .header-info{display:flex;justify-content:space-between;margin-bottom:15px;font-size:12px;}
+      .group-title{font-weight:bold;text-align:left;margin-top:20px;margin-bottom:5px;font-size:14px;}
+      .group-subtitle{text-align:left;margin-bottom:10px;font-size:12px;}
+      .group-container{page-break-inside:avoid;}
+      .footer-stats{margin-top:30px;font-size:14px;font-weight:bold;}
+      @page { size: A4; margin: 15mm; }
+      @media print {
+        body { padding: 0; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
+      }
+    </style></head><body>`;
+
+    html += `<h2>ПРОТОКОЛ ИТОГОВЫЙ</h2>`;
+
+    const dateObj = new Date();
+    const dateStr = dateObj.toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'}).replace(' г.', '').replace(' г', '') + ' г.';
+    
+    html += `<div class="header-info">
+      <div>${dateStr}</div>
+      <div>${escapeHTML(eventLoc)}</div>
+    </div>`;
+
+    if (compName) {
+      html += `<h3 style="font-weight:bold; font-size:16px;">${escapeHTML(compName)}</h3>`;
+    }
+    if (parsedStage) {
+      html += `<h3 style="font-weight:bold; font-size:16px;">${escapeHTML(parsedStage.toUpperCase())}</h3>`;
+    }
+
+    const groupsMap = buildGroupsMap();
+    let totalParticipants = 0;
+    const pointsTable = [100, 85, 75, 67, 59, 51, 45, 39, 33, 29, 25, 22, 19, 16, 13, 10, 7, 4, 2, 1];
+
+    Object.keys(groupsMap).sort().forEach(groupName => {
+      const group = groupsMap[groupName].slice();
+      const baseLaps = currentGroupBaseLaps[groupName] || Math.min(...group.map(r => r.maxLaps));
+      const dist = (baseLaps * lapDistNum).toFixed(1).replace('.0', '');
+      
+      const sorted = group.sort((a, b) => {
+        const scoreA = a.finishTime !== null ? a.maxLaps : a.controlFinishTime !== null ? a.lapsDone : a.lapsDone;
+        const scoreB = b.finishTime !== null ? b.maxLaps : b.controlFinishTime !== null ? b.lapsDone : b.lapsDone;
+        if (scoreA !== scoreB) return scoreB - scoreA;
+
+        const timeA = a.finishTime ?? a.controlFinishTime ?? a.lapTimes[a.lapTimes.length - 1] ?? 0;
+        const timeB = b.finishTime ?? b.controlFinishTime ?? b.lapTimes[b.lapTimes.length - 1] ?? 0;
+        return timeA - timeB;
+      });
+
+      html += `<div class="group-container">`;
+      html += `<div class="group-title">${escapeHTML(groupName)}</div>`;
+      html += `<div class="group-subtitle">Дистанция ${dist} км (${baseLaps} кругов х ${lapDistStr || lapDistNum + ' км'})</div>`;
+      
+      html += `<table><thead><tr>
+        <th>Место</th>
+        <th>№ ст-го</th>
+        <th>Дата рожд.</th>
+        <th>Фамилия, Имя, Отчество</th>
+        <th>Город</th>
+${!hideGroupCol ? '        <th>№ группы</th>' : ''}
+        <th>Результат</th>
+        <th>Отставание</th>
+        <th>Очки</th>
+      </tr></thead><tbody>`;
+
+      let place = 1;
+      let lastSec = 0;
+      let leaderSec = 0;
+      
+      sorted.forEach((r, idx) => {
+        if (r.lapsDone > 0 || r.finishTime !== null || r.controlFinishTime !== null) {
+          totalParticipants++;
+        }
+        let timeStr = '—';
+        let gapStr = '—';
+        let placeStr = 'б/м';
+        let pointsStr = '';
+        
+        if (r.finishTime !== null || r.controlFinishTime !== null || r.lapsDone >= baseLaps) {
+           placeStr = place;
+           pointsStr = pointsTable[place - 1] || 0;
+           place++;
+           
+           let ms = r.finishTime !== null ? r.finishTime : (r.controlFinishTime !== null ? r.controlFinishTime : (r.lapTimes[r.lapTimes.length - 1] || 0));
+           let sec = Math.round(ms / 1000);
+           
+           if (idx === 0) {
+             leaderSec = sec;
+             lastSec = sec;
+           } else {
+             if (sec <= lastSec) {
+               sec = lastSec + 1;
+             }
+             lastSec = sec;
+           }
+           
+           const h = Math.floor(sec / 3600);
+           const m = Math.floor((sec % 3600) / 60);
+           const s = sec % 60;
+           timeStr = (h > 0 ? h.toString().padStart(2, '0') + ':' : '00:') + m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+
+           if (idx > 0 && leaderSec > 0) {
+             const gap = sec - leaderSec;
+             if (gap > 0) {
+               const gh = Math.floor(gap / 3600);
+               const gm = Math.floor((gap % 3600) / 60);
+               const gs = gap % 60;
+               gapStr = '+' + (gh > 0 ? gh.toString().padStart(2, '0') + ':' : '00:') + gm.toString().padStart(2, '0') + ':' + gs.toString().padStart(2, '0');
+             }
+           }
+        } else if (r.lapsDone === 0) {
+           placeStr = 'н/с';
+           timeStr = 'н/с';
+        } else {
+           placeStr = 'н/ф';
+           timeStr = 'н/ф';
+        }
+
+        html += `<tr>
+          <td>${placeStr}</td>
+          <td>${escapeHTML(r.id)}</td>
+          <td>${escapeHTML(r.year || '')}</td>
+          <td class="align-left">${escapeHTML(r.name)}</td>
+          <td>${escapeHTML(r.city || '')}</td>
+${!hideGroupCol ? `          <td>${escapeHTML(r.studyGroup || '')}</td>` : ''}
+          <td>${timeStr}</td>
+          <td>${gapStr}</td>
+          <td>${pointsStr}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      html += `</div>`;
+    });
+
+    html += `<div class="footer-stats">Стартовало участников: ${totalParticipants}</div>`;
+    html += `</body></html>`;
+    
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    const dateForTitle = dateObj.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
+    let rawFileName = `${compName || 'Протокол'} ${parsedStage ? '(' + parsedStage + ') ' : ''}- ${dateForTitle}.html`;
+    rawFileName = rawFileName.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    link.download = rawFileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('HTML протокол сформирован', 'success');
+  }
+
   function exportToHTML() {
     if (Object.keys(riders).length === 0) {
       showToast('⚠️ Нет данных для экспорта', 'warn', 2500);
       return;
     }
     const container = document.getElementById('resultsTablesContainer');
+    const compName = document.getElementById('competitionName') ? document.getElementById('competitionName').value : '';
+    const dateObj = new Date();
+    const dateStr = dateObj.toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'}).replace(' г.', '').replace(' г', '') + ' г.';
+    
+    let totalParticipants = 0;
+    Object.values(riders).forEach(r => {
+      if (r.lapsDone > 0 || r.finishTime !== null || r.controlFinishTime !== null) {
+        totalParticipants++;
+      }
+    });
+
     const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Итоговый протокол</title>
     <style>
-      body{font-family:Arial,sans-serif;padding:20px;color:#111}
-      h1,h2{margin-top:0}
-      table{border-collapse:collapse;width:100%;margin-bottom:22px}
-      th,td{border:1px solid #ccc;padding:8px;font-size:13px;white-space:nowrap;text-align:left}
-      th{background:#f3f3f3}
-      .group{margin-bottom:28px}
-      .meta{color:#555;font-size:13px;margin-bottom:10px}
-      @media print{button{display:none}}
+      body{font-family:Arial,sans-serif;padding:20px;color:#000;font-size:12px;margin:0;}
+      h1,h2,h3,h4{margin:5px 0;text-align:center;font-weight:normal;}
+      h2{font-weight:bold;font-size:18px;}
+      table{border-collapse:collapse;margin-bottom:20px;font-size:12px;}
+      th,td{border:1px solid #000;padding:4px 6px;white-space:nowrap;text-align:center;}
+      th{background:#fff;font-weight:bold;}
+      td.align-left{text-align:left;}
+      .results-group-header{font-weight:bold;text-align:left;margin-top:20px;margin-bottom:5px;font-size:14px;}
+      .results-group-block{page-break-inside:avoid;}
+      .header-info{display:flex;justify-content:space-between;margin-bottom:15px;font-size:12px;}
+      .footer-stats{margin-top:30px;font-size:14px;font-weight:bold;}
+      @page { size: A4 landscape; margin: 15mm; }
+      @media print {
+        body { padding: 0; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
+        button{display:none}
+      }
     </style></head><body>
-    <h1>Итоговые результаты</h1>
-    <div class="meta">Сформировано: ${new Date().toLocaleString('ru-RU')}</div>
+    <h2>ИТОГОВЫЕ РЕЗУЛЬТАТЫ</h2>
+    <div class="header-info">
+      <div>${dateStr}</div>
+      <div>Сформировано: ${dateObj.toLocaleTimeString('ru-RU')}</div>
+    </div>
+    ${compName ? `<h3 style="font-weight:bold; font-size:16px;">${escapeHTML(compName)}</h3>` : ''}
     ${container.innerHTML}
+    <div class="footer-stats">Стартовало участников: ${totalParticipants}</div>
     </body></html>`;
     try {
-      downloadText(html, 'timing_results.html', 'text/html;charset=utf-8');
+      const dateForTitle = dateObj.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'});
+      let rawFileName = `${compName || 'Протокол'} - ${dateForTitle}.html`;
+      rawFileName = rawFileName.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+      downloadText(html, rawFileName, 'text/html;charset=utf-8');
       showToast('✅ HTML готов к сохранению', 'success', 2500);
     } catch(e) {
       showToast('❌ Ошибка экспорта HTML', 'error', 3000);
