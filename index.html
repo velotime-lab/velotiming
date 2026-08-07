@@ -1090,14 +1090,108 @@
     textEl.textContent = text || (ok ? 'Система стабильна' : 'Внимание');
   }
 
-  // ===== Sound System (Removed) =====
-  function playClickSound() {}
-  function playStartHorn() { safeVibrate([100, 80, 100, 80, 300]); }
+    // ===== Sound System =====
+  let audioCtx = null;
+  let audioNeedsResume = false;
+
+  function attachAudioResumeListener() {
+    const handler = () => {
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => { audioNeedsResume = false; }).catch(() => {});
+      }
+      if (audioCtx && audioCtx.state === 'running') {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0;
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.01);
+        } catch(e) {}
+      }
+    };
+    document.addEventListener('touchstart', handler, { passive: true });
+    document.addEventListener('touchend', handler, { passive: true });
+    document.addEventListener('mousedown', handler, { passive: true });
+    document.addEventListener('pointerdown', handler, { passive: true });
+    document.addEventListener('click', handler, { passive: true });
+    document.addEventListener('keydown', handler, { passive: true });
+  }
+  attachAudioResumeListener();
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) {
+        return null;
+      }
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => {
+        audioNeedsResume = false;
+      }).catch(() => {
+        audioNeedsResume = true;
+      });
+    }
+    return audioCtx;
+  }
+
+  function playClickSound() {
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const offset = ctx.state === 'running' ? 0 : 0.06;
+      const now = ctx.currentTime + offset;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1200, now);
+      oscillator.frequency.exponentialRampToValueAtTime(600, now + 0.06);
+      gainNode.gain.setValueAtTime(0.3, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.15);
+    } catch (e) {}
+  }
+
+  function playStartHorn() {
+    try {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const tones = [
+        { freq: 600, start: 0,    dur: 0.3 },
+        { freq: 800, start: 0.35, dur: 0.3 },
+        { freq: 1200, start: 0.70, dur: 0.8 }
+      ];
+      tones.forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(t.freq, now + t.start);
+        
+        gain.gain.setValueAtTime(0, now + t.start);
+        gain.gain.linearRampToValueAtTime(1.0, now + t.start + 0.05);
+        gain.gain.setValueAtTime(1.0, now + t.start + t.dur - 0.05);
+        gain.gain.linearRampToValueAtTime(0, now + t.start + t.dur);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + t.start);
+        osc.stop(now + t.start + t.dur + 0.05);
+      });
+      safeVibrate([200, 100, 200, 100, 600]);
+    } catch (e) {}
+  }
 
   // ===== Safe vibration =====
   function safeVibrate(pattern) {
     try {
-      if (navigator.vibrate && typeof navigator.vibrate === "function") {
+      if (navigator.vibrate && typeof navigator.vibrate === 'function') {
         navigator.vibrate(pattern);
       }
     } catch(e) {}
@@ -1269,7 +1363,13 @@
         // Re-request wake lock
         requestWakeLock();
 
-
+        // iOS AudioContext often gets permanently stuck/interrupted in background.
+        // The most reliable fix is to close it and let the next touch recreate it.
+        if (audioCtx) {
+          try { audioCtx.close(); } catch(e) {}
+          audioCtx = null;
+          audioNeedsResume = false;
+        }
 
         // Verify timer interval is still running
         ensureTimerRunning();
