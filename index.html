@@ -1062,26 +1062,25 @@
   let audioNeedsResume = false;
   let silentOscillator = null;
 
-  // ===== Variant 1: Enhanced Touch-based AudioContext resume for iOS =====
+  // ===== Touch-based AudioContext resume for iOS =====
   // iOS only allows audioCtx.resume() during a user gesture (touch/click).
   function attachAudioResumeListener() {
     const handler = () => {
-      if (!audioCtx) {
-        getAudioContext();
-      }
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => { audioNeedsResume = false; }).catch(() => {});
       }
-      // ===== Variant 2: Start continuous silent oscillator =====
-      // This prevents the OS from suspending the audio context when idle
-      if (audioCtx && audioCtx.state === 'running' && !silentOscillator) {
+      
+      // Ping the audio context with a tiny silent oscillator on every interaction
+      // to keep it alive and wake it up if it went to sleep
+      if (audioCtx && audioCtx.state === 'running') {
         try {
-          silentOscillator = audioCtx.createOscillator();
-          const silentGain = audioCtx.createGain();
-          silentGain.gain.value = 0; // completely silent
-          silentOscillator.connect(silentGain);
-          silentGain.connect(audioCtx.destination);
-          silentOscillator.start();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0;
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.01);
         } catch(e) {}
       }
     };
@@ -1396,10 +1395,12 @@
         // Re-request wake lock
         requestWakeLock();
 
-        // Mark audio as needing resume — will be restored on first touch
-        // (iOS only allows resume during user gesture, not here)
-        if (audioCtx && audioCtx.state === 'suspended') {
-          audioNeedsResume = true;
+        // iOS AudioContext often gets permanently stuck/interrupted in background.
+        // The most reliable fix is to close it and let the next touch recreate it.
+        if (audioCtx) {
+          try { audioCtx.close(); } catch(e) {}
+          audioCtx = null;
+          audioNeedsResume = false;
         }
 
         // Verify timer interval is still running
